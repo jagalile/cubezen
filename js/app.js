@@ -1,7 +1,7 @@
 (() => {
   const $ = (sel) => document.querySelector(sel);
   // The 3D world loads from a CDN; keep the rest of the page working without it.
-  const Scene = window.Scene || { setRain() {}, setTimeMode() {}, setSeason() {} };
+  const Scene = window.Scene || { setRain() {}, setFire() {}, setTimeMode() {}, setSeason() {} };
   const store = {
     get(key, fallback) {
       try { const v = localStorage.getItem('cubezen.' + key); return v ? JSON.parse(v) : fallback; }
@@ -31,6 +31,7 @@
       el.style.setProperty('--fill', v * 100 + '%');
       Ambience.setVolume(kind, v);
       if (kind === 'rain') Scene.setRain(v);
+      if (kind === 'fire') Scene.setFire(v);
     };
     el.value = prefs[kind];
     apply();

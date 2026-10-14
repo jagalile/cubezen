@@ -105,17 +105,28 @@ const fireTex = new THREE.CanvasTexture(fireCanvas);
 fireTex.magFilter = fireTex.minFilter = THREE.NearestFilter;
 fireTex.colorSpace = THREE.SRGBColorSpace;
 const fireMat = new THREE.MeshBasicMaterial({ map: fireTex, transparent: true, alphaTest: 0.1, side: THREE.DoubleSide, depthWrite: false, toneMapped: false });
-for (const rot of [Math.PI / 4, -Math.PI / 4]) {
-  const p = new THREE.Mesh(new THREE.PlaneGeometry(0.85, 1.3), fireMat);
-  p.position.set(F.x, F.y + 0.68, F.z);
+const flames = [Math.PI / 4, -Math.PI / 4].map((rot) => {
+  const geo = new THREE.PlaneGeometry(0.85, 1.3);
+  geo.translate(0, 0.65, 0);                             // grow upwards from the logs
+  const p = new THREE.Mesh(geo, fireMat);
+  p.position.set(F.x, F.y + 0.03, F.z);
   p.rotation.y = rot;
   scene.add(p);
-}
-function drawFire() {
+  return p;
+});
+// level 0–1 follows the fire volume: 0 leaves glowing embers and a wisp of smoke.
+function drawFire(level) {
   const g = fireCanvas.getContext('2d');
   g.clearRect(0, 0, 16, 24);
+  for (let x = 3; x < 13; x++) {                         // embers at the base, always lit
+    g.fillStyle = Math.random() < 0.35 ? '#ff8a2c' : Math.random() < 0.5 ? '#c8341a' : '#7a1e12';
+    g.fillRect(x, 23, 1, 1);
+    if (Math.abs(x - 7.5) < 3 && Math.random() < 0.5) g.fillRect(x, 22, 1, 1);
+  }
+  if (level < 0.02) { fireTex.needsUpdate = true; return; }
+  const scale = 0.2 + level * 0.95;
   for (let x = 2; x < 14; x++) {
-    const h = Math.max(0, Math.round((14 - Math.abs(x - 7.5) * 2.4) * (0.6 + Math.random() * 0.5)));
+    const h = Math.max(0, Math.round((14 - Math.abs(x - 7.5) * 2.4) * (0.6 + Math.random() * 0.5) * scale));
     for (let k = 0; k < h; k++) {
       const f = k / Math.max(1, h);
       g.fillStyle = f < 0.3 && Math.abs(x - 7.5) < 3 ? '#fff4b0' : f < 0.6 ? '#ffb43c' : f < 0.85 ? '#ff6a24' : '#d0401c';
@@ -245,7 +256,7 @@ function sample(t) {
 }
 
 const state = {
-  timeMode: 'cycle', season: 'auto', rain: 0,
+  timeMode: 'cycle', season: 'auto', rain: 0, fire: 0.35,
   t: 0.62, resolvedSeason: null,
 };
 const FIXED_TIMES = { day: 0.45, sunset: 0.715, night: 0.92 };
@@ -351,13 +362,19 @@ function updateRain(dt) {
   rGeo.attributes.position.needsUpdate = true;
 }
 
-// Chimney smoke and fire embers.
-const SMOKE = 40, EMBERS = 24;
+// Chimney smoke, campfire smoke and embers.
+const SMOKE = 40, EMBERS = 24, WISPS = 30;
 const sGeo = new THREE.BufferGeometry(), sPos = new Float32Array(SMOKE * 3), sAge = new Float32Array(SMOKE);
 const ch = world.chimney;
 for (let i = 0; i < SMOKE; i++) { sAge[i] = Math.random() * 7; }
 sGeo.setAttribute('position', new THREE.BufferAttribute(sPos, 3));
 const smoke = new THREE.Points(sGeo, new THREE.PointsMaterial({ color: 0xd6d6de, size: 0.7, transparent: true, opacity: 0.4, depthWrite: false }));
+const wGeo = new THREE.BufferGeometry(), wPos = new Float32Array(WISPS * 3), wAge = new Float32Array(WISPS);
+for (let i = 0; i < WISPS; i++) wAge[i] = Math.random() * 5;
+wGeo.setAttribute('position', new THREE.BufferAttribute(wPos, 3));
+const wisps = new THREE.Points(wGeo, new THREE.PointsMaterial({ color: 0xc8c8d0, size: 0.32, transparent: true, opacity: 0.35, depthWrite: false }));
+wisps.frustumCulled = false;
+scene.add(wisps);
 smoke.frustumCulled = false;
 scene.add(smoke);
 const eGeo = new THREE.BufferGeometry(), ePos = new Float32Array(EMBERS * 3), eAge = new Float32Array(EMBERS);
@@ -366,7 +383,22 @@ eGeo.setAttribute('position', new THREE.BufferAttribute(ePos, 3));
 const embers = new THREE.Points(eGeo, new THREE.PointsMaterial({ color: 0xffa040, size: 0.08, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, toneMapped: false }));
 embers.frustumCulled = false;
 scene.add(embers);
-function updateSmokeAndEmbers(dt, time) {
+function updateSmokeAndEmbers(dt, time, level) {
+  // Chimney: a thin trail when the fire is low, a fuller plume when it's high.
+  sGeo.setDrawRange(0, Math.round(14 + level * (SMOKE - 14)));
+  smoke.material.opacity = 0.22 + level * 0.25;
+  smoke.material.size = 0.5 + level * 0.35;
+  // Campfire: smoke is most visible when it's only smouldering.
+  wisps.material.opacity = 0.12 + (1 - level) * 0.3;
+  for (let i = 0; i < WISPS; i++) {
+    wAge[i] = (wAge[i] + dt) % 5;
+    const a = wAge[i];
+    wPos[i * 3] = F.x + a * 0.25 + Math.sin(a * 1.7 + i) * 0.18;
+    wPos[i * 3 + 1] = F.y + 0.3 + a * (0.55 + level * 0.4);
+    wPos[i * 3 + 2] = F.z + Math.cos(a * 1.3 + i * 2.1) * 0.18;
+  }
+  wGeo.attributes.position.needsUpdate = true;
+  eGeo.setDrawRange(0, Math.round(EMBERS * level));
   for (let i = 0; i < SMOKE; i++) {
     sAge[i] = (sAge[i] + dt) % 7;
     const a = sAge[i];
@@ -380,7 +412,7 @@ function updateSmokeAndEmbers(dt, time) {
     if (eAge[i] > 2) eAge[i] = 0;
     const a = eAge[i];
     ePos[i * 3] = F.x + Math.sin(i * 7.1 + time) * 0.25 + a * 0.1;
-    ePos[i * 3 + 1] = F.y + 0.6 + a * 1.4;
+    ePos[i * 3 + 1] = F.y + 0.6 + a * (0.8 + level * 0.9);
     ePos[i * 3 + 2] = F.z + Math.cos(i * 3.3) * 0.25;
   }
   eGeo.attributes.position.needsUpdate = true;
@@ -450,7 +482,7 @@ function applyTime(t) {
   blockMat.emissiveIntensity = 0.05 + k.night * 1.1;
   lanternMat.color.setScalar(0.55 + k.night * 0.45).multiply(new THREE.Color(0xffc66e));
   windowLight.intensity = k.night * 18;
-  for (const g of glows) g.material.opacity = g.userData.strength * (g === fireGlow ? 0.5 + k.night * 0.5 : k.night);
+  for (const g of glows) g.material.opacity = g.userData.strength * (g === fireGlow ? (0.5 + k.night * 0.5) * (0.3 + fireLevel * 0.7) : k.night);
   return k;
 }
 
@@ -465,7 +497,7 @@ function resize() {
 addEventListener('resize', resize);
 resize();
 
-let last = performance.now(), time = 0, acc = 0, fireTimer = 0, shadowTimer = 0;
+let last = performance.now(), time = 0, acc = 0, fireTimer = 1, shadowTimer = 0, fireLevel = 0.35;
 const camOffset = new THREE.Vector3();
 
 function resolveTime(dt) {
@@ -500,9 +532,10 @@ function update(step) {
   fireTimer += step;
   if (fireTimer > 0.09) {
     fireTimer = 0;
-    drawFire();
-    fireLight.intensity = (16 + Math.random() * 10) * (0.15 + k.night * 0.95);
-    fireGlow.scale.setScalar(8 + Math.random() * 1.5);
+    drawFire(fireLevel);
+    for (const f of flames) f.scale.set(0.8 + fireLevel * 0.45, 0.7 + fireLevel * 0.7, 1);
+    fireLight.intensity = (16 + Math.random() * 10) * (0.15 + k.night * 0.95) * (0.12 + fireLevel * 0.95);
+    fireGlow.scale.setScalar((3 + fireLevel * 6) * (1 + Math.random() * 0.18));
   }
   atlas.waterMap.offset.x = state.resolvedSeason === 'winter' ? 0 : time * 0.02;
   atlas.waterMap.offset.y = state.resolvedSeason === 'winter' ? 0 : Math.sin(time * 0.3) * 0.05;
@@ -512,7 +545,8 @@ function update(step) {
   const s = state.resolvedSeason;
   updateFireflies(time, (s === 'summer' || s === 'spring' ? 1 : 0) * Math.max(0, k.night - 0.3) * (1 - state.rain));
   updateRain(step);
-  updateSmokeAndEmbers(step, time);
+  fireLevel += (state.fire - fireLevel) * Math.min(1, step * 2);   // ease towards the slider
+  updateSmokeAndEmbers(step, time, fireLevel);
 
   shadowTimer += step;
   if (shadowTimer > 0.5) { shadowTimer = 0; renderer.shadowMap.needsUpdate = true; }
@@ -522,6 +556,7 @@ function update(step) {
 // URL overrides, e.g. ?time=sunset&season=spring (handy for screenshots).
 if (params.get('time')) state.timeMode = params.get('time');
 if (params.get('season')) state.season = params.get('season');
+if (params.get('fire')) state.fire = fireLevel = Number(params.get('fire'));
 if (params.get('t')) { state.timeMode = 'cycle'; state.t = Number(params.get('t')); }
 applySeason(state.season === 'auto' ? seasonFromDate() : state.season);
 renderer.shadowMap.needsUpdate = true;
@@ -530,6 +565,7 @@ requestAnimationFrame(frame);
 
 window.Scene = {
   setRain(level) { state.rain = Math.max(0, Math.min(1, level)); },
+  setFire(level) { state.fire = Math.max(0, Math.min(1, level)); },
   setTimeMode(mode) { if (!params.get('time')) state.timeMode = mode; },
   setSeason(season) { if (!params.get('season')) state.season = season; },
   get state() { return { ...state, season: state.season, resolved: state.resolvedSeason }; },
