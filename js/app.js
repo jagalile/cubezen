@@ -1,5 +1,7 @@
 (() => {
   const $ = (sel) => document.querySelector(sel);
+  // The 3D world loads from a CDN; keep the rest of the page working without it.
+  const Scene = window.Scene || { setRain() {}, setTimeMode() {}, setSeason() {} };
   const store = {
     get(key, fallback) {
       try { const v = localStorage.getItem('cubezen.' + key); return v ? JSON.parse(v) : fallback; }
@@ -50,7 +52,7 @@
     $('#pomo-time').textContent = fmt(remaining);
     $('#pomo-start').textContent = running ? 'Pause' : 'Start';
     document.title = running ? `${fmt(remaining)} · ${LABEL[mode]} — Cubezen` : 'Cubezen — cozy blocky lofi';
-    document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('active', t.dataset.mode === mode));
+    document.querySelectorAll('#pomodoro .tab').forEach((t) => t.classList.toggle('active', t.dataset.mode === mode));
     const inCycle = stats.count % 4 || (stats.count ? 4 : 0);
     $('#pomo-blocks').innerHTML = [0, 1, 2, 3].map((i) => `<span class="${i < inCycle ? 'on' : ''}"></span>`).join('');
     $('#pomo-count').textContent = `${stats.count} focus session${stats.count === 1 ? '' : 's'} today`;
@@ -83,8 +85,21 @@
 
   $('#pomo-start').addEventListener('click', () => (running ? stop() : start()));
   $('#pomo-reset').addEventListener('click', () => setMode(mode));
-  document.querySelectorAll('.tab').forEach((t) => t.addEventListener('click', () => setMode(t.dataset.mode)));
+  document.querySelectorAll('#pomodoro .tab').forEach((t) => t.addEventListener('click', () => setMode(t.dataset.mode)));
   renderPomodoro();
+
+  // ---------- world: time of day & season ----------
+  const worldPrefs = store.get('world', { time: 'cycle', season: 'auto' });
+  function renderWorld() {
+    document.querySelectorAll('#time-tabs .tab').forEach((t) => t.classList.toggle('active', t.dataset.time === worldPrefs.time));
+    document.querySelectorAll('#season-tabs .tab').forEach((t) => t.classList.toggle('active', t.dataset.season === worldPrefs.season));
+    Scene.setTimeMode(worldPrefs.time);
+    Scene.setSeason(worldPrefs.season);
+    store.set('world', worldPrefs);
+  }
+  document.querySelectorAll('#time-tabs .tab').forEach((t) => t.addEventListener('click', () => { worldPrefs.time = t.dataset.time; renderWorld(); }));
+  document.querySelectorAll('#season-tabs .tab').forEach((t) => t.addEventListener('click', () => { worldPrefs.season = t.dataset.season; renderWorld(); }));
+  renderWorld();
 
   // ---------- tasks ----------
   let tasks = store.get('tasks', []);

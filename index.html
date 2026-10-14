@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Cubezen — cozy blocky lofi</title>
   <meta name="description" content="Cozy blocky lofi for study & play. A pixel campfire, soft generative piano, rain and a pomodoro timer.">
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' shape-rendering='crispEdges'%3E%3Cpolygon points='8,1 15,4.5 8,8 1,4.5' fill='%2379c35f'/%3E%3Cpolygon points='1,4.5 8,8 8,15 1,11.5' fill='%238a5a36'/%3E%3Cpolygon points='15,4.5 8,8 8,15 15,11.5' fill='%23654027'/%3E%3C/svg%3E">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
@@ -23,11 +23,7 @@
   <div class="ui">
     <header class="brand">
       <h1>
-        <svg class="logo" viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true">
-          <polygon points="8,1 15,4.5 8,8 1,4.5" fill="#79c35f"/>
-          <polygon points="1,4.5 8,8 8,15 1,11.5" fill="#8a5a36"/>
-          <polygon points="15,4.5 8,8 8,15 15,11.5" fill="#654027"/>
-        </svg>
+        <img class="logo" src="icon.svg" alt="">
         Cubezen
       </h1>
       <p>cozy blocky lofi for study &amp; play</p>
@@ -47,6 +43,24 @@
         </div>
         <div class="blocks" id="pomo-blocks" aria-hidden="true"></div>
         <p class="muted center" id="pomo-count"></p>
+      </section>
+
+      <section class="panel" id="world" aria-label="World">
+        <h2>World</h2>
+        <div class="tabs left" id="time-tabs">
+          <button class="tab" data-time="cycle" title="Full day every 20 minutes">Cycle</button>
+          <button class="tab" data-time="clock" title="Follow your local time">Clock</button>
+          <button class="tab" data-time="day">Day</button>
+          <button class="tab" data-time="sunset">Sunset</button>
+          <button class="tab" data-time="night">Night</button>
+        </div>
+        <div class="tabs left" id="season-tabs">
+          <button class="tab" data-season="auto" title="Season from today's date">Auto</button>
+          <button class="tab" data-season="spring">Spring</button>
+          <button class="tab" data-season="summer">Summer</button>
+          <button class="tab" data-season="autumn">Autumn</button>
+          <button class="tab" data-season="winter">Winter</button>
+        </div>
       </section>
 
       <section class="panel" id="tasks" aria-label="Tasks">
@@ -81,9 +95,10 @@
     <p class="legal">Original music &amp; art. Not affiliated with Mojang or Microsoft.</p>
   </div>
 
-  <script src="js/scene.js"></script>
-  <script src="js/composer.js"></script>
-  <script src="js/audio.js"></script>
-  <script src="js/app.js"></script>
+  <script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }</script>
+  <script type="module" src="js/world/main.js"></script>
+  <script defer src="js/composer.js"></script>
+  <script defer src="js/audio.js"></script>
+  <script defer src="js/app.js"></script>
 </body>
 </html>
