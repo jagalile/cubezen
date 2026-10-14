@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { createAtlas, SEASONS, rng } from './textures.js';
 import { generateWorld, buildTerrain, buildWater, buildPlants, buildFar } from './build.js';
 import { createCritters } from './critters.js';
+import { createProps } from './props.js';
 
 const PIXEL = 0.5;            // render at half resolution for a soft pixel look
 const DAY_LENGTH = 20 * 60;   // seconds per full day in cycle mode
@@ -43,6 +44,7 @@ let plants = null, far = null;
 const farMat = new THREE.MeshLambertMaterial({ vertexColors: true });
 
 const critters = createCritters(scene, world);
+const props = createProps(scene, world);
 
 // ---------- small props: lantern posts, lanterns, campfire ----------
 const woodMat = new THREE.MeshLambertMaterial({ color: 0x5a3b22 });
@@ -436,6 +438,7 @@ function applySeason(name) {
   const winter = name === 'winter';
   waterMat.opacity = winter ? 0.96 : 0.82;
   setupParticles(name);
+  props.setSeason(name);
   renderer.shadowMap.needsUpdate = true;
 }
 
@@ -551,6 +554,7 @@ function update(step) {
   fireLevel += (state.fire - fireLevel) * Math.min(1, step * 2);   // ease towards the slider
   updateSmokeAndEmbers(step, time, fireLevel);
   critters.update(step, time, { night: k.night, rain: state.rain, season: s });
+  props.update(step, time);
 
   shadowTimer += step;
   if (shadowTimer > 0.5) { shadowTimer = 0; renderer.shadowMap.needsUpdate = true; }

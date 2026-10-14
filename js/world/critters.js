@@ -252,7 +252,7 @@ export function createCritters(scene, world) {
           zLead += 0.75 * dt;
           family.forEach((d, i) => {
             const z = zLead - i * (i ? 0.8 : 1.2);
-            const x = riverX(z) + Math.sin(z * 0.4 + i) * 0.5;
+            const x = riverX(z) - 1.7 + Math.sin(z * 0.4 + i) * 0.3;   // keep clear of the dock and boat
             const dx = riverX(z + 0.5) - riverX(z - 0.5);
             d.g.position.set(x, waterY - 0.02 + Math.sin(time * 2 + i) * 0.02, z);
             d.g.rotation.y = heading(dx, 1);

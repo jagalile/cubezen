@@ -19,8 +19,9 @@ URL overrides for previews: `?time=day|sunset|night|clock|cycle`, `?t=0.72` (0 =
 ## Structure
 
 - `js/world/main.js`: Three.js renderer, sky, lighting keyframes for the day/night cycle, seasons, particles (petals, leaves, snow, rain, fireflies, smoke)
-- `js/world/build.js`: voxel world generation (terrain, river, cabin, trees, plants), face-culled meshing with ambient occlusion, distant mountains
+- `js/world/build.js`: voxel world generation (terrain, river, cabin, farm plot, trees, plants and seasonal crops), face-culled meshing with ambient occlusion, distant mountains
 - `js/world/textures.js`: procedural 16×16 pixel textures, repainted per season
+- `js/world/props.js`: hand-built details: the farm's fence, scarecrow, pumpkins and hay bales, and the dock with its moored rowboat
 - `js/world/critters.js`: a cat asleep by the fire, butterflies, and an occasional visitor (rabbit, birds, ducks, deer)
 - `js/composer.js`: generative composer (modes, voicings, motifs, piece structure); pure JS, no audio
 - `js/audio.js`: synthesised piano and pad that perform the composer's pieces, plus rain and campfire

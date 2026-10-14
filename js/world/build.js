@@ -4,7 +4,7 @@ import { rng, T, tileUV, SEASONS } from './textures.js';
 
 export const B = {
   AIR: 0, GRASS: 1, DIRT: 2, STONE: 3, SAND: 4, LOG: 5, LEAVES0: 6, LEAVES1: 7, LEAVES2: 8,
-  PLANKS: 9, COBBLE: 10, ROOF: 11, WINDOW: 12, PATH: 13, BIRCH: 14, DOOR: 15, WATER: 16,
+  PLANKS: 9, COBBLE: 10, ROOF: 11, WINDOW: 12, PATH: 13, BIRCH: 14, DOOR: 15, WATER: 16, FARMLAND: 17,
 };
 const isLeaves = (id) => id >= B.LEAVES0 && id <= B.LEAVES2;
 
@@ -25,6 +25,7 @@ const FACE_TILES = {
   [B.PATH]: [T.path, T.dirt, T.dirt],
   [B.BIRCH]: [T.logTop, T.logTop, T.birch],
   [B.DOOR]: [T.planks, T.planks, T.door],
+  [B.FARMLAND]: [T.farmland, T.dirt, T.dirt],
 };
 
 const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
@@ -62,6 +63,9 @@ export function generateWorld() {
   const riverX = (z) => 32 + 9 * Math.sin(z * 0.055) + 4 * Math.sin(z * 0.16 + 1);
   const CABIN = { x0: 64, x1: 74, z0: 52, z1: 59 };
   const FIRE = { x: 59, z: 70 };
+  const FARM = { x0: 39, x1: 49, z0: 60, z1: 67, waterZ: 63 };
+  const DOCK_Z = 46, dockX = riverX(DOCK_Z);
+  const DOCK = { x0: dockX, x1: dockX + 7, z0: DOCK_Z - 2, z1: DOCK_Z + 3 };
   const rectDist = (x, z, q, m) => Math.hypot(Math.max(q.x0 - m - x, 0, x - q.x1 - m), Math.max(q.z0 - m - z, 0, z - q.z1 - m));
 
   // ---- heightmap ----
@@ -75,7 +79,7 @@ export function generateWorld() {
     const carve = smooth(16, 4.5, d);
     h = h * (1 - carve) + (WL - 0.5) * carve;
     if (d < 3.2) h = WL - 2 - (d < 1.6 ? 1 : 0);
-    const flat = Math.max(smooth(7, 1, rectDist(x, z, CABIN, 3)), smooth(8, 2, Math.hypot(x - FIRE.x, z - FIRE.z)));
+    const flat = Math.max(smooth(7, 1, rectDist(x, z, CABIN, 3)), smooth(8, 2, Math.hypot(x - FIRE.x, z - FIRE.z)), smooth(5, 1, rectDist(x, z, FARM, 2)));
     h = h * (1 - flat) + G * flat;
     height[z * W + x] = Math.round(h);
     riverDist[z * W + x] = d;
@@ -93,6 +97,13 @@ export function generateWorld() {
       set(x, y, z, id);
     }
     for (let y = h + 1; y <= WL; y++) set(x, y, z, B.WATER);
+  }
+
+  // ---- farm plot: tilled rows with a water channel through the middle ----
+  for (let z = FARM.z0; z <= FARM.z1; z++) for (let x = FARM.x0; x <= FARM.x1; x++) {
+    const h = H_(x, z);
+    set(x, h, z, z === FARM.waterZ ? B.WATER : B.FARMLAND);
+    if (z === FARM.waterZ) set(x, h - 1, z, B.DIRT);
   }
 
   // ---- path from the campfire to the door and towards the viewer ----
@@ -158,11 +169,16 @@ export function generateWorld() {
     decor.push({ type: 'lantern', x: lx + 0.5, y: y + 1.5, z: lz + 0.5 });
   }
 
+  // Lantern on the dock's end post.
+  decor.push({ type: 'post', x: dockX + 0.55, y: WL + 1.25, z: DOCK_Z + 1.45 });
+  decor.push({ type: 'lantern', x: dockX + 0.55, y: WL + 2.75, z: DOCK_Z + 1.45 });
+
   // ---- trees ----
   const taken = new Uint8Array(W * D);
   const canGrow = (x, z) => {
     if (x < 2 || z < 2 || x > W - 3 || z > D - 3) return false;
     if (riverDist[z * W + x] < 6.5 || rectDist(x, z, CABIN, 4) < 1 || Math.hypot(x - FIRE.x, z - FIRE.z) < 7) return false;
+    if (rectDist(x, z, FARM, 4) < 1 || rectDist(x, z, DOCK, 3) < 1) return false;
     for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) if (pathCells.has(x + dx + ',' + (z + dz))) return false;
     if (get(x, H_(x, z), z) !== B.GRASS) return false;
     for (let dz = -3; dz <= 3; dz++) for (let dx = -3; dx <= 3; dx++) if (taken[(z + dz) * W + x + dx]) return false;
@@ -227,6 +243,7 @@ export function generateWorld() {
   for (let z = 0; z < D; z++) for (let x = 0; x < W; x++) {
     const h = H_(x, z);
     if (get(x, h, z) !== B.GRASS || get(x, h + 1, z) !== B.AIR) continue;
+    if (rectDist(x, z, FARM, 1) < 0.5 || rectDist(x, z, DOCK, 0) < 0.5) continue;
     const density = 0.12 + fbm(n1, x * 0.15 + 40, z * 0.15) * 0.35;
     if (r() < density) plants.push({ x, y: h + 1, z, u: r(), k: r(), s: 0.75 + r() * 0.35, ox: (r() - 0.5) * 0.4, oz: (r() - 0.5) * 0.4 });
   }
@@ -234,6 +251,7 @@ export function generateWorld() {
   return {
     W, H, D, WL, G, get, plants, decor, chimney, riverX,
     ground: (x, z) => H_(Math.floor(x), Math.floor(z)) + 1,
+    farm: FARM, dock: { x: dockX, z: DOCK_Z },
     fire: { x: FIRE.x + 0.5, y: G + 1, z: FIRE.z + 0.5 },
     windows: [{ x: 67, y: G + 3, z: z1 + 1.2 }, { x: 72, y: G + 3, z: z1 + 1.2 }],
   };
@@ -298,11 +316,11 @@ export function buildTerrain(world) {
 }
 
 export function buildWater(world) {
-  const { W, D, WL, get } = world;
+  const { W, D, H, get } = world;
   const pos = [], nor = [], uv = [], col = [], index = [];
-  const y = WL + 1 - 0.14;
-  for (let z = 0; z < D; z++) for (let x = 0; x < W; x++) {
-    if (get(x, WL, z) !== B.WATER) continue;
+  for (let wy = 0; wy < H - 1; wy++) for (let z = 0; z < D; z++) for (let x = 0; x < W; x++) {
+    if (get(x, wy, z) !== B.WATER || get(x, wy + 1, z) !== B.AIR) continue;
+    const y = wy + 1 - 0.14;
     const base = pos.length / 3;
     pos.push(x, y, z + 1, x + 1, y, z + 1, x + 1, y, z, x, y, z);
     nor.push(0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0);
@@ -332,6 +350,35 @@ export function buildPlants(world, seasonName) {
       col.push(0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 1, 1, 1, 1, 1, 1);
       index.push(base, base + 1, base + 2, base, base + 2, base + 3);
     }
+  }
+
+  // Crops: a "#" of four planes per tilled cell, like a dense little field.
+  const { farm } = world;
+  const crop = (x, z, tile, h) => {
+    const [u0, v0, u1, v1] = tileUV(tile);
+    const y = world.ground(x, z);
+    for (const [ax, o] of [[0, 0.25], [0, 0.75], [1, 0.25], [1, 0.75]]) {
+      const base = pos.length / 3;
+      if (ax === 0) pos.push(x + o, y, z, x + o, y, z + 1, x + o, y + h, z + 1, x + o, y + h, z);
+      else pos.push(x, y, z + o, x + 1, y, z + o, x + 1, y + h, z + o, x, y + h, z + o);
+      nor.push(0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0);
+      uv.push(u0, v0, u1, v0, u1, v1, u0, v1);
+      col.push(0.95, 0.95, 0.95, 0.95, 0.95, 0.95, 1, 1, 1, 1, 1, 1);
+      index.push(base, base + 1, base + 2, base, base + 2, base + 3);
+    }
+  };
+  const r = rng(33);
+  for (let z = farm.z0; z <= farm.z1; z++) for (let x = farm.x0; x <= farm.x1; x++) {
+    const v = r();
+    if (z === farm.waterZ || seasonName === 'winter') continue;
+    if (x === farm.x0 + 5 && z === farm.z0 + 5) continue;            // the scarecrow stands here
+    if (z === farm.z1) {                                               // pumpkin row: leafy vines
+      crop(x, z, seasonName === 'spring' ? T.wheat0 : T.tallGrass, seasonName === 'spring' ? 0.5 : 0.6);
+      continue;
+    }
+    if (seasonName === 'spring') crop(x, z, v < 0.5 ? T.wheat0 : T.wheat1, v < 0.5 ? 0.5 : 0.7);
+    else if (seasonName === 'summer') crop(x, z, T.wheat2, 0.95 + v * 0.1);
+    else crop(x, z, x <= farm.x0 + 4 ? T.stubble : T.wheat3, x <= farm.x0 + 4 ? 0.3 : 1.0);  // half harvested
   }
   return geometry(pos, nor, uv, col, index);
 }

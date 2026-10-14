@@ -14,6 +14,7 @@ export const T = {
   grassTop: 0, grassSide: 1, dirt: 2, stone: 3, sand: 4, logSide: 5, logTop: 6, leaves0: 7,
   leaves1: 8, leaves2: 9, planks: 10, cobble: 11, roof: 12, window: 13, path: 14, birch: 15,
   door: 16, tallGrass: 17, flower0: 18, flower1: 19, flower2: 20, bush: 21,
+  farmland: 22, wheat0: 23, wheat1: 24, wheat2: 25, wheat3: 26, stubble: 27,
 };
 const COLS = 8, ROWS = 4, S = 16;
 
@@ -255,6 +256,28 @@ export function createAtlas() {
         for (let y = 15; y > 7 + Math.floor(r() * 4); y--) { px(x, y, '#7a5a3a'); if (r() < 0.3) x += r() < 0.5 ? -1 : 1; }
       }
     });
+
+    // ---- crops ----
+    tile(T.farmland, (px) => {
+      for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
+        const ridge = y % 4 === 0 || y % 4 === 1;
+        let c = ridge ? (r() < 0.5 ? '#6e4a2e' : '#674429') : (r() < 0.5 ? '#4a301d' : '#523520');
+        if (season.snow && (ridge ? r() < 0.95 : r() < 0.7)) c = r() < 0.85 ? '#f2f6fb' : '#dde6f0';
+        px(x, y, c);
+      }
+    });
+    const stalks = (px, count, minH, maxH, stem, head) => {
+      for (let i = 0; i < count; i++) {
+        const x = 1 + Math.floor(r() * 14), h = minH + Math.floor(r() * (maxH - minH + 1));
+        for (let y = 15; y > 15 - h; y--) px(x, y, pick(stem));
+        if (head) for (let y = 16 - h; y < 16 - h + 3; y++) { px(x, y, pick(head)); if (r() < 0.5) px(x + 1, y, pick(head)); }
+      }
+    };
+    tile(T.wheat0, (px) => stalks(px, 6, 2, 4, ['#6cc04f', '#5aa843'], null));
+    tile(T.wheat1, (px) => stalks(px, 11, 6, 10, ['#6cc04f', '#5aa843', '#7cd05e'], null));
+    tile(T.wheat2, (px) => stalks(px, 14, 11, 15, ['#8fb848', '#a3c050', '#7aa83e'], ['#d6d070', '#c8c060']));
+    tile(T.wheat3, (px) => stalks(px, 14, 12, 15, ['#c8a040', '#d8b450', '#b89038'], ['#e8c860', '#f0d470', '#d0a840']));
+    tile(T.stubble, (px) => stalks(px, 12, 1, 3, ['#c8a040', '#a88a3a'], null));
 
     // Water (or ice in winter): its own repeating texture.
     const wg = waterCanvas.getContext('2d');
