@@ -1,7 +1,9 @@
 // Generative lofi piano + ambient rain and campfire, all synthesised with Web Audio.
 // No audio files: every note is original and generated live in the browser.
 window.Ambience = (() => {
-  let ctx = null, master, musicBus, rainGain, fireGain, reverb, white;
+  let ctx = null, master, musicBus, musicOut, rainGain, fireGain, reverb, white;
+  // Notes of the current play session; dropped on pause so nothing keeps sounding.
+  let session = null;
   let playing = false, scheduler = null;
   const vol = { music: 0.6, rain: 0, fire: 0.35 };
   const LEVEL = { music: 0.8, rain: 0.5, fire: 0.7 };
@@ -38,14 +40,24 @@ window.Ambience = (() => {
     ctx = new (window.AudioContext || window.webkitAudioContext)();
 
     master = ctx.createGain();
+    master.gain.value = 0.8;
+    // Gentle safety limiter only: a heavy compressor flattens the volume sliders.
     const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -6;
+    comp.knee.value = 6;
+    comp.ratio.value = 4;
     master.connect(comp).connect(ctx.destination);
+
+    // Play/pause gate after the reverb, so pausing also cuts the reverb tail.
+    musicOut = ctx.createGain();
+    musicOut.gain.value = 0;
+    musicOut.connect(master);
 
     reverb = ctx.createConvolver();
     reverb.buffer = impulse(3.5, 2.6);
     const wet = ctx.createGain();
     wet.gain.value = 0.5;
-    reverb.connect(wet).connect(master);
+    reverb.connect(wet).connect(musicOut);
 
     // Music bus with a slow "tape wow" and a warm lowpass.
     musicBus = ctx.createGain();
@@ -61,7 +73,7 @@ window.Ambience = (() => {
     warm.type = 'lowpass';
     warm.frequency.value = 2400;
     musicBus.connect(wow).connect(warm);
-    warm.connect(master);
+    warm.connect(musicOut);
     warm.connect(reverb);
 
     white = noiseBuffer(4);
@@ -140,7 +152,7 @@ window.Ambience = (() => {
   }
 
   // A soft, felt-piano-ish voice.
-  function voice(midi, t, velocity, duration, dest = musicBus) {
+  function voice(midi, t, velocity, duration, dest) {
     const f = mtof(midi);
     const env = ctx.createGain();
     env.gain.setValueAtTime(0.0001, t);
@@ -165,8 +177,16 @@ window.Ambience = (() => {
 
     body.connect(lp);
     overtone.connect(overtoneGain).connect(lp);
-    lp.connect(env).connect(dest);
-    for (const o of [body, overtone]) { o.start(t); o.stop(t + duration + 0.05); }
+    lp.connect(env).connect(dest || session.input);
+    for (const o of [body, overtone]) {
+      o.start(t);
+      o.stop(t + duration + 0.05);
+      if (!dest) {
+        const notes = session.notes;
+        notes.add(o);
+        o.onended = () => notes.delete(o);
+      }
+    }
   }
 
   function nextPiece() {
@@ -226,6 +246,10 @@ window.Ambience = (() => {
     init();
     if (playing) return;
     playing = true;
+    session = { input: ctx.createGain(), notes: new Set() };
+    session.input.connect(musicBus);
+    musicOut.gain.cancelScheduledValues(ctx.currentTime);
+    musicOut.gain.setTargetAtTime(1, ctx.currentTime, 0.02);
     if (!piece) nextPiece();
     else pieceListeners.forEach((cb) => cb(piece.name));
     nextTime = ctx.currentTime + 0.1;
@@ -234,15 +258,26 @@ window.Ambience = (() => {
   }
 
   function pause() {
+    if (!playing) return;
     playing = false;
     clearInterval(scheduler);
+    // Quick fade (~150ms) instead of letting already-scheduled notes ring out.
+    const old = session;
+    session = null;
+    musicOut.gain.cancelScheduledValues(ctx.currentTime);
+    musicOut.gain.setTargetAtTime(0, ctx.currentTime, 0.04);
+    old.input.gain.setTargetAtTime(0, ctx.currentTime, 0.04);
+    setTimeout(() => {
+      old.notes.forEach((o) => { try { o.stop(); } catch {} });
+      old.input.disconnect();
+    }, 300);
   }
 
   function setVolume(kind, value) {
     vol[kind] = value;
     if (!ctx) return;
     const node = { music: musicBus, rain: rainGain, fire: fireGain }[kind];
-    node.gain.setTargetAtTime(value * value * LEVEL[kind], ctx.currentTime, 0.1);
+    node.gain.setTargetAtTime(value * value * LEVEL[kind], ctx.currentTime, 0.03);
   }
 
   function chime() {
