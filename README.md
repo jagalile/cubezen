@@ -17,6 +17,7 @@ Shortcuts: `Space` play/pause · `H` zen mode · `F` fullscreen.
 ## Structure
 
 - `js/scene.js`: 320×180 canvas scene, scaled up with `image-rendering: pixelated`
-- `js/audio.js`: generative piano, rain and campfire synthesis
+- `js/composer.js`: generative composer (modes, voicings, motifs, piece structure); pure JS, no audio
+- `js/audio.js`: synthesised piano and pad that perform the composer's pieces, plus rain and campfire
 - `js/app.js`: mixer, pomodoro, tasks and shortcuts (state saved in `localStorage`)
 - `css/style.css`: pixel UI
