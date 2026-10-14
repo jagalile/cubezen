@@ -14,13 +14,14 @@ python3 -m http.server 8000
 
 Shortcuts: `Space` play/pause · `H` zen mode · `F` fullscreen.
 
-URL overrides for previews: `?time=day|sunset|night|clock|cycle`, `?t=0.72` (0 = midnight, 0.5 = noon), `?season=spring|summer|autumn|winter`.
+URL overrides for previews: `?time=day|sunset|night|clock|cycle`, `?t=0.72` (0 = midnight, 0.5 = noon), `?season=spring|summer|autumn|winter`, `?critter=rabbit|birds|ducks|deer&advance=10` (spawn a visitor and fast-forward it).
 
 ## Structure
 
 - `js/world/main.js`: Three.js renderer, sky, lighting keyframes for the day/night cycle, seasons, particles (petals, leaves, snow, rain, fireflies, smoke)
 - `js/world/build.js`: voxel world generation (terrain, river, cabin, trees, plants), face-culled meshing with ambient occlusion, distant mountains
 - `js/world/textures.js`: procedural 16×16 pixel textures, repainted per season
+- `js/world/critters.js`: a cat asleep by the fire, butterflies, and an occasional visitor (rabbit, birds, ducks, deer)
 - `js/composer.js`: generative composer (modes, voicings, motifs, piece structure); pure JS, no audio
 - `js/audio.js`: synthesised piano and pad that perform the composer's pieces, plus rain and campfire
 - `js/app.js`: mixer, pomodoro, tasks and shortcuts (state saved in `localStorage`)

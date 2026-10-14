@@ -233,6 +233,7 @@ export function generateWorld() {
 
   return {
     W, H, D, WL, G, get, plants, decor, chimney, riverX,
+    ground: (x, z) => H_(Math.floor(x), Math.floor(z)) + 1,
     fire: { x: FIRE.x + 0.5, y: G + 1, z: FIRE.z + 0.5 },
     windows: [{ x: 67, y: G + 3, z: z1 + 1.2 }, { x: 72, y: G + 3, z: z1 + 1.2 }],
   };

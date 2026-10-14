@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { createAtlas, SEASONS, rng } from './textures.js';
 import { generateWorld, buildTerrain, buildWater, buildPlants, buildFar } from './build.js';
+import { createCritters } from './critters.js';
 
 const PIXEL = 0.5;            // render at half resolution for a soft pixel look
 const DAY_LENGTH = 20 * 60;   // seconds per full day in cycle mode
@@ -40,6 +41,8 @@ scene.add(water);
 const plantMat = new THREE.MeshLambertMaterial({ map: atlas.map, vertexColors: true, alphaTest: 0.5, side: THREE.DoubleSide });
 let plants = null, far = null;
 const farMat = new THREE.MeshLambertMaterial({ vertexColors: true });
+
+const critters = createCritters(scene, world);
 
 // ---------- small props: lantern posts, lanterns, campfire ----------
 const woodMat = new THREE.MeshLambertMaterial({ color: 0x5a3b22 });
@@ -547,6 +550,7 @@ function update(step) {
   updateRain(step);
   fireLevel += (state.fire - fireLevel) * Math.min(1, step * 2);   // ease towards the slider
   updateSmokeAndEmbers(step, time, fireLevel);
+  critters.update(step, time, { night: k.night, rain: state.rain, season: s });
 
   shadowTimer += step;
   if (shadowTimer > 0.5) { shadowTimer = 0; renderer.shadowMap.needsUpdate = true; }
@@ -560,6 +564,11 @@ if (params.get('fire')) state.fire = fireLevel = Number(params.get('fire'));
 if (params.get('t')) { state.timeMode = 'cycle'; state.t = Number(params.get('t')); }
 applySeason(state.season === 'auto' ? seasonFromDate() : state.season);
 renderer.shadowMap.needsUpdate = true;
+if (params.get('critter')) {                    // e.g. ?critter=deer&advance=12, for previews
+  const env = { night: 0, rain: 0, season: state.resolvedSeason };
+  critters.spawn(params.get('critter'), env);
+  for (let i = 0; i < Number(params.get('advance') || 0) * 10; i++) critters.update(0.1, i * 0.1, env);
+}
 update(1 / 30);
 requestAnimationFrame(frame);
 
