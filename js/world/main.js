@@ -466,8 +466,6 @@ addEventListener('resize', resize);
 resize();
 
 let last = performance.now(), time = 0, acc = 0, fireTimer = 0, shadowTimer = 0;
-let pointer = { x: 0, y: 0 };
-addEventListener('pointermove', (e) => { pointer = { x: e.clientX / innerWidth - 0.5, y: e.clientY / innerHeight - 0.5 }; });
 const camOffset = new THREE.Vector3();
 
 function resolveTime(dt) {
@@ -493,7 +491,7 @@ function update(step) {
   applySeason(state.season === 'auto' ? seasonFromDate() : state.season);
   const k = applyTime(state.t);
 
-  camOffset.set(Math.sin(time * 0.05) * 1.2 + pointer.x * 2, Math.sin(time * 0.07) * 0.4 - pointer.y, 0);
+  camOffset.set(Math.sin(time * 0.05) * 1.2, Math.sin(time * 0.07) * 0.4, 0);   // slow, gentle sway
   camera.position.copy(CAM_POS).add(camOffset);
   camera.lookAt(CAM_TARGET);
   sky.position.copy(camera.position);
