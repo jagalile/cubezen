@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cubezen — cozy blocky lofi</title>
+  <meta name="description" content="Cozy blocky lofi for study & play. A pixel campfire, soft generative piano, rain and a pomodoro timer.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' shape-rendering='crispEdges'%3E%3Cpolygon points='8,1 15,4.5 8,8 1,4.5' fill='%2379c35f'/%3E%3Cpolygon points='1,4.5 8,8 8,15 1,11.5' fill='%238a5a36'/%3E%3Cpolygon points='15,4.5 8,8 8,15 15,11.5' fill='%23654027'/%3E%3C/svg%3E">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <canvas id="scene" aria-hidden="true"></canvas>
+  <div class="vignette" aria-hidden="true"></div>
+
+  <div class="tools">
+    <button class="btn" id="btn-zen" title="Hide interface (H)">Zen</button>
+    <button class="btn" id="btn-fs" title="Fullscreen (F)">Full</button>
+  </div>
+
+  <div class="ui">
+    <header class="brand">
+      <h1>
+        <svg class="logo" viewBox="0 0 16 16" shape-rendering="crispEdges" aria-hidden="true">
+          <polygon points="8,1 15,4.5 8,8 1,4.5" fill="#79c35f"/>
+          <polygon points="1,4.5 8,8 8,15 1,11.5" fill="#8a5a36"/>
+          <polygon points="15,4.5 8,8 8,15 15,11.5" fill="#654027"/>
+        </svg>
+        Cubezen
+      </h1>
+      <p>cozy blocky lofi for study &amp; play</p>
+    </header>
+
+    <aside class="side">
+      <section class="panel" id="pomodoro" aria-label="Pomodoro timer">
+        <div class="tabs" role="tablist">
+          <button class="tab active" data-mode="focus">Focus</button>
+          <button class="tab" data-mode="short">Short</button>
+          <button class="tab" data-mode="long">Long</button>
+        </div>
+        <div class="time" id="pomo-time">25:00</div>
+        <div class="row">
+          <button class="btn primary" id="pomo-start">Start</button>
+          <button class="btn" id="pomo-reset">Reset</button>
+        </div>
+        <div class="blocks" id="pomo-blocks" aria-hidden="true"></div>
+        <p class="muted center" id="pomo-count"></p>
+      </section>
+
+      <section class="panel" id="tasks" aria-label="Tasks">
+        <h2>Tasks</h2>
+        <form id="task-form" autocomplete="off">
+          <input id="task-input" placeholder="Add a task…" maxlength="80" aria-label="New task">
+          <button class="btn" aria-label="Add task">+</button>
+        </form>
+        <ul id="task-list"></ul>
+      </section>
+    </aside>
+
+    <footer class="player panel">
+      <button class="btn primary play" id="btn-play" aria-label="Play music" title="Play / pause (Space)">
+        <svg class="i-play" viewBox="0 0 10 10" shape-rendering="crispEdges" aria-hidden="true">
+          <rect x="2" y="1" width="2" height="8"/><rect x="4" y="2" width="2" height="6"/>
+          <rect x="6" y="3" width="2" height="4"/><rect x="8" y="4" width="1" height="2"/>
+        </svg>
+        <svg class="i-pause" viewBox="0 0 10 10" shape-rendering="crispEdges" aria-hidden="true">
+          <rect x="2" y="1" width="2" height="8"/><rect x="6" y="1" width="2" height="8"/>
+        </svg>
+      </button>
+      <div class="now">
+        <span class="label">Now playing</span>
+        <span id="track">Press play</span>
+      </div>
+      <label class="mix"><span>Music</span><input type="range" id="vol-music" min="0" max="1" step="0.01"></label>
+      <label class="mix"><span>Rain</span><input type="range" id="vol-rain" min="0" max="1" step="0.01"></label>
+      <label class="mix"><span>Fire</span><input type="range" id="vol-fire" min="0" max="1" step="0.01"></label>
+    </footer>
+
+    <p class="legal">Original music &amp; art. Not affiliated with Mojang or Microsoft.</p>
+  </div>
+
+  <script src="js/scene.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
