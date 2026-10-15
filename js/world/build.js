@@ -69,8 +69,8 @@ export function generateWorld() {
   const CABIN = { x0: 64, x1: 74, z0: 52, z1: 59 };
   const FIRE = { x: 62, z: 72 };
   const CAMP = { x0: 68, x1: 75, z0: 75, z1: 82 };                 // the tent, woodpile and crates
-  // A rocky knoll right of the camp with a mine dug into its cliff (entrance 3 wide, x 80–82).
-  const MINE = { x: 81, face: 65, x0: 77, x1: 90, z0: 52 };
+  // A mine dug into the right-hand slope, its mouth (3 wide, z 55–57) looking west to the meadow.
+  const MINE = { face: 94, z: 56 };
   const FARM = { x0: 39, x1: 49, z0: 60, z1: 67, waterZ: 63 };
   const DOCK_Z = 46, dockX = riverX(DOCK_Z);
   const DOCK = { x0: dockX, x1: dockX + 7, z0: DOCK_Z - 2, z1: DOCK_Z + 3 };
@@ -97,10 +97,8 @@ export function generateWorld() {
     let h = naturalHeight(x, z);
     const flat = Math.max(smooth(7, 1, rectDist(x, z, CABIN, 3)), smooth(8, 2, Math.hypot(x - FIRE.x, z - FIRE.z)), smooth(5, 1, rectDist(x, z, FARM, 2)), smooth(6, 1, rectDist(x, z, CAMP, 1)));
     h = h * (1 - flat) + G * flat;
-    // The knoll: gentle slopes, except a steep cliff along the front around the entrance.
-    const kx = Math.max(MINE.x0 - x, 0, x - MINE.x1), kz = Math.max(MINE.z0 - z, 0, z - MINE.face);
-    const front = z > MINE.face && x >= MINE.x - 4 && x <= MINE.x + 6 ? 9 : 2.4;
-    h = Math.max(h, G + 8 - Math.hypot(kx * 2.4, kz * front));
+    // The yard dug out of the slope in front of the mine.
+    if (x >= MINE.face - 6 && x < MINE.face && z >= MINE.z - 3 && z <= MINE.z + 5) h = Math.min(h, G);
     height[z * W + x] = Math.round(h);
     riverDist[z * W + x] = d;
   }
@@ -126,32 +124,33 @@ export function generateWorld() {
     if (z === FARM.waterZ) set(x, h - 1, z, B.DIRT);
   }
 
-  // ---- the mine: a stone cliff with ore veins, a timber-framed entrance and a short tunnel ----
+  // ---- the mine: a stone face with ore veins, a timber-framed mouth and a tunnel into the hill ----
   const rMine = rng(77);
-  for (let x = MINE.x - 5; x <= MINE.x + 7; x++) for (let z = MINE.face - 2; z <= MINE.face; z++) {
+  // The rock face and the walls of the cut (everything below the turf around the yard).
+  for (let z = MINE.z - 4; z <= MINE.z + 6; z++) for (let x = MINE.face - 6; x <= MINE.face + 1; x++) {
     for (let y = G + 1; y < H_(x, z); y++) {
       const v = rMine();
-      set(x, y, z, v < 0.06 ? B.ORE_COAL : v < 0.1 ? B.ORE_COPPER : v < 0.125 ? B.ORE_GOLD : v < 0.14 ? B.ORE_CRYSTAL : v < 0.3 ? B.COBBLE : B.STONE);
+      set(x, y, z, v < 0.07 ? B.ORE_COAL : v < 0.12 ? B.ORE_COPPER : v < 0.15 ? B.ORE_GOLD : v < 0.17 ? B.ORE_CRYSTAL : v < 0.35 ? B.COBBLE : B.STONE);
     }
   }
-  for (let z = MINE.face - 7; z <= MINE.face; z++) {
-    for (let x = MINE.x - 1; x <= MINE.x + 1; x++) {
-      for (let y = G + 1; y <= G + 4; y++) set(x, y, z, B.AIR);
+  for (let x = MINE.face - 1; x <= MINE.face + 7; x++) {
+    for (let z = MINE.z - 1; z <= MINE.z + 1; z++) {
+      if (x >= MINE.face) for (let y = G + 1; y <= G + 3; y++) set(x, y, z, B.AIR);
       set(x, G, z, B.PATH);
     }
     // Timber sets: posts and a cap beam at the mouth and every three blocks inside.
-    if ((MINE.face - z) % 3 === 0) {
-      for (let y = G + 1; y <= G + 4; y++) { set(MINE.x - 2, y, z, B.LOG); set(MINE.x + 2, y, z, B.LOG); }
-      for (let x = MINE.x - 2; x <= MINE.x + 2; x++) set(x, G + 5, z, B.PLANKS);
+    if (x >= MINE.face && (x - MINE.face) % 3 === 0) {
+      for (let y = G + 1; y <= G + 3; y++) { set(x, y, MINE.z - 2, B.LOG); set(x, y, MINE.z + 2, B.LOG); }
+      for (let z = MINE.z - 2; z <= MINE.z + 2; z++) set(x, G + 4, z, B.PLANKS);
     }
   }
-  // A few ore veins left showing in the tunnel walls.
-  set(MINE.x - 2, G + 2, MINE.face - 2, B.ORE_GOLD);
-  set(MINE.x + 2, G + 3, MINE.face - 4, B.ORE_CRYSTAL);
-  set(MINE.x - 2, G + 3, MINE.face - 5, B.ORE_COPPER);
-  decor.push({ type: 'lantern', x: MINE.x + 0.5, y: G + 4.35, z: MINE.face - 3.5, hanging: true });
-  decor.push({ type: 'post', x: MINE.x + 3.2, y: G + 1, z: MINE.face + 1.6 });
-  decor.push({ type: 'lantern', x: MINE.x + 3.2, y: G + 2.5, z: MINE.face + 1.6 });
+  // A few veins left showing in the tunnel walls.
+  set(MINE.face + 2, G + 2, MINE.z - 2, B.ORE_GOLD);
+  set(MINE.face + 4, G + 3, MINE.z + 2, B.ORE_CRYSTAL);
+  set(MINE.face + 5, G + 1, MINE.z - 2, B.ORE_COPPER);
+  decor.push({ type: 'lantern', x: MINE.face + 3.5, y: G + 3.35, z: MINE.z + 0.5, hanging: true });
+  decor.push({ type: 'post', x: MINE.face - 1.4, y: G + 1, z: MINE.z + 3.3 });
+  decor.push({ type: 'lantern', x: MINE.face - 1.4, y: G + 2.5, z: MINE.z + 3.3 });
 
   // ---- stone hearth under the campfire ----
   for (let dz = -3; dz <= 3; dz++) for (let dx = -3; dx <= 3; dx++) {
@@ -237,7 +236,7 @@ export function generateWorld() {
     if (x < 2 || z < 2 || x > W - 3 || z > D - 3) return false;
     if (riverDist[z * W + x] < 6.5 || rectDist(x, z, CABIN, 4) < 1 || Math.hypot(x - FIRE.x, z - FIRE.z) < 7) return false;
     if (rectDist(x, z, FARM, 4) < 1 || rectDist(x, z, DOCK, 3) < 1 || rectDist(x, z, CAMP, 3) < 1) return false;
-    if (x > MINE.x - 8 && x < MINE.x + 9 && z > MINE.face - 4) return false;    // the mine's cliff and yard
+    if (x > MINE.face - 10 && x < MINE.face + 4 && z > MINE.z - 7 && z < MINE.z + 9) return false;   // the mine's mouth and yard
     if (x > 36 && x < 92 && z > 62) return false;                    // keep the foreground meadow open
     for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) if (pathCells.has(x + dx + ',' + (z + dz))) return false;
     if (bushes.some(([bx, bz]) => Math.abs(bx - x) < 3 && Math.abs(bz - z) < 3)) return false;
@@ -299,10 +298,6 @@ export function generateWorld() {
     tree(x, z, kind, leaves);
   }
 
-  // Two trees on top of the mine's knoll (planted after the forest so its layout doesn't shift).
-  tree(MINE.x - 2, MINE.face - 6, 'round', B.LEAVES0);
-  tree(MINE.x + 5, MINE.face - 8, 'wide', B.LEAVES2);
-
   // ---- plant spots (filled per season) ----
   const plants = [];
   for (let z = 0; z < D; z++) for (let x = 0; x < W; x++) {
@@ -310,7 +305,7 @@ export function generateWorld() {
     if (get(x, h, z) !== B.GRASS || get(x, h + 1, z) !== B.AIR) continue;
     if (rectDist(x, z, FARM, 1) < 0.5 || rectDist(x, z, DOCK, 0) < 0.5 || rectDist(x, z, CAMP, 0) < 0.5) continue;
     if (bushes.some(([bx, bz]) => bx === x && bz === z)) continue;
-    if (x > MINE.x - 3 && x < MINE.x + 6 && z > MINE.face && z < MINE.face + 9) continue;  // rails and ore piles
+    if (x >= MINE.face - 7 && x < MINE.face && z >= MINE.z - 3 && z <= MINE.z + 5) continue;  // rails and ore piles
     const density = 0.12 + fbm(n1, x * 0.15 + 40, z * 0.15) * 0.35;
     if (r() < density) plants.push({ x, y: h + 1, z, u: r(), k: r(), s: 0.75 + r() * 0.35, ox: (r() - 0.5) * 0.4, oz: (r() - 0.5) * 0.4 });
   }

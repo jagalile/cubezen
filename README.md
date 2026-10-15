@@ -8,7 +8,7 @@ All art and music are original. The music is composed and synthesised live in th
 
 ## Features
 
-- **A living valley**: a river with a dock and a rowboat, a farm plot with seasonal crops, a cabin with a smoking chimney, a campfire on a stone hearth, a camping tent, a mine dug into a rocky knoll with a loaded minecart and piles of ore, trees, bushes and flowers, and hills that carry the river off into the haze. A cat sleeps by the fire, and now and then a rabbit, a flock of birds, a family of ducks or a deer coming down to drink passes by.
+- **A living valley**: a river with a dock and a rowboat, a farm plot with seasonal crops, a cabin with a smoking chimney, a campfire on a stone hearth, a camping tent, a mine dug into the hillside with a loaded minecart and piles of ore, trees, bushes and flowers, and hills that carry the river off into the haze. A cat sleeps by the fire, and now and then a rabbit, a flock of birds, a family of ducks or a deer coming down to drink passes by.
 - **Day and night**: a continuous cycle, synced to your clock or fixed at day, sunset or night, with sun, moon, stars, clouds and fireflies.
 - **Seasons**: picked automatically from the date or chosen by hand. Colours, particles (petals, leaves, snow) and details of the world change; in winter the river freezes.
 - **Generative music**: ever-new piano pieces, each with its own mode, motif and structure, in the spirit of calm game soundtracks.
