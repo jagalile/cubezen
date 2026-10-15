@@ -5,6 +5,7 @@ import { rng, T, tileUV, SEASONS } from './textures.js';
 export const B = {
   AIR: 0, GRASS: 1, DIRT: 2, STONE: 3, SAND: 4, LOG: 5, LEAVES0: 6, LEAVES1: 7, LEAVES2: 8,
   PLANKS: 9, COBBLE: 10, ROOF: 11, WINDOW: 12, PATH: 13, BIRCH: 14, DOOR: 15, WATER: 16, FARMLAND: 17,
+  ORE_COAL: 18, ORE_COPPER: 19, ORE_GOLD: 20, ORE_CRYSTAL: 21,
 };
 const isLeaves = (id) => id >= B.LEAVES0 && id <= B.LEAVES2;
 
@@ -26,6 +27,10 @@ const FACE_TILES = {
   [B.BIRCH]: [T.logTop, T.logTop, T.birch],
   [B.DOOR]: [T.planks, T.planks, T.door],
   [B.FARMLAND]: [T.farmland, T.dirt, T.dirt],
+  [B.ORE_COAL]: [T.oreCoal, T.oreCoal, T.oreCoal],
+  [B.ORE_COPPER]: [T.oreCopper, T.oreCopper, T.oreCopper],
+  [B.ORE_GOLD]: [T.oreGold, T.oreGold, T.oreGold],
+  [B.ORE_CRYSTAL]: [T.oreCrystal, T.oreCrystal, T.oreCrystal],
 };
 
 const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
@@ -64,10 +69,14 @@ export function generateWorld() {
   const CABIN = { x0: 64, x1: 74, z0: 52, z1: 59 };
   const FIRE = { x: 62, z: 72 };
   const CAMP = { x0: 68, x1: 75, z0: 75, z1: 82 };                 // the tent, woodpile and crates
+  // A rocky knoll right of the camp with a mine dug into its cliff (entrance 3 wide, x 80–82).
+  const MINE = { x: 81, face: 65, x0: 77, x1: 90, z0: 52 };
   const FARM = { x0: 39, x1: 49, z0: 60, z1: 67, waterZ: 63 };
   const DOCK_Z = 46, dockX = riverX(DOCK_Z);
   const DOCK = { x0: dockX, x1: dockX + 7, z0: DOCK_Z - 2, z1: DOCK_Z + 3 };
   const rectDist = (x, z, q, m) => Math.hypot(Math.max(q.x0 - m - x, 0, x - q.x1 - m), Math.max(q.z0 - m - z, 0, z - q.z1 - m));
+
+  const decor = [];
 
   // ---- heightmap ----
   // Natural terrain (hills behind, rising edges, the river valley); buildFar continues it past the map.
@@ -88,6 +97,10 @@ export function generateWorld() {
     let h = naturalHeight(x, z);
     const flat = Math.max(smooth(7, 1, rectDist(x, z, CABIN, 3)), smooth(8, 2, Math.hypot(x - FIRE.x, z - FIRE.z)), smooth(5, 1, rectDist(x, z, FARM, 2)), smooth(6, 1, rectDist(x, z, CAMP, 1)));
     h = h * (1 - flat) + G * flat;
+    // The knoll: gentle slopes, except a steep cliff along the front around the entrance.
+    const kx = Math.max(MINE.x0 - x, 0, x - MINE.x1), kz = Math.max(MINE.z0 - z, 0, z - MINE.face);
+    const front = z > MINE.face && x >= MINE.x - 4 && x <= MINE.x + 6 ? 9 : 2.4;
+    h = Math.max(h, G + 8 - Math.hypot(kx * 2.4, kz * front));
     height[z * W + x] = Math.round(h);
     riverDist[z * W + x] = d;
   }
@@ -112,6 +125,33 @@ export function generateWorld() {
     set(x, h, z, z === FARM.waterZ ? B.WATER : B.FARMLAND);
     if (z === FARM.waterZ) set(x, h - 1, z, B.DIRT);
   }
+
+  // ---- the mine: a stone cliff with ore veins, a timber-framed entrance and a short tunnel ----
+  const rMine = rng(77);
+  for (let x = MINE.x - 5; x <= MINE.x + 7; x++) for (let z = MINE.face - 2; z <= MINE.face; z++) {
+    for (let y = G + 1; y < H_(x, z); y++) {
+      const v = rMine();
+      set(x, y, z, v < 0.06 ? B.ORE_COAL : v < 0.1 ? B.ORE_COPPER : v < 0.125 ? B.ORE_GOLD : v < 0.14 ? B.ORE_CRYSTAL : v < 0.3 ? B.COBBLE : B.STONE);
+    }
+  }
+  for (let z = MINE.face - 7; z <= MINE.face; z++) {
+    for (let x = MINE.x - 1; x <= MINE.x + 1; x++) {
+      for (let y = G + 1; y <= G + 4; y++) set(x, y, z, B.AIR);
+      set(x, G, z, B.PATH);
+    }
+    // Timber sets: posts and a cap beam at the mouth and every three blocks inside.
+    if ((MINE.face - z) % 3 === 0) {
+      for (let y = G + 1; y <= G + 4; y++) { set(MINE.x - 2, y, z, B.LOG); set(MINE.x + 2, y, z, B.LOG); }
+      for (let x = MINE.x - 2; x <= MINE.x + 2; x++) set(x, G + 5, z, B.PLANKS);
+    }
+  }
+  // A few ore veins left showing in the tunnel walls.
+  set(MINE.x - 2, G + 2, MINE.face - 2, B.ORE_GOLD);
+  set(MINE.x + 2, G + 3, MINE.face - 4, B.ORE_CRYSTAL);
+  set(MINE.x - 2, G + 3, MINE.face - 5, B.ORE_COPPER);
+  decor.push({ type: 'lantern', x: MINE.x + 0.5, y: G + 4.35, z: MINE.face - 3.5, hanging: true });
+  decor.push({ type: 'post', x: MINE.x + 3.2, y: G + 1, z: MINE.face + 1.6 });
+  decor.push({ type: 'lantern', x: MINE.x + 3.2, y: G + 2.5, z: MINE.face + 1.6 });
 
   // ---- stone hearth under the campfire ----
   for (let dz = -3; dz <= 3; dz++) for (let dx = -3; dx <= 3; dx++) {
@@ -142,7 +182,6 @@ export function generateWorld() {
 
   // ---- cabin ----
   const { x0, x1, z0, z1 } = CABIN;
-  const decor = [];
   for (let z = z0; z <= z1 + 2; z++) for (let x = x0; x <= x1; x++) set(x, G, z, B.PLANKS);
   for (let y = G + 1; y <= G + 5; y++) for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) {
     const edgeX = x === x0 || x === x1, edgeZ = z === z0 || z === z1;
@@ -198,6 +237,7 @@ export function generateWorld() {
     if (x < 2 || z < 2 || x > W - 3 || z > D - 3) return false;
     if (riverDist[z * W + x] < 6.5 || rectDist(x, z, CABIN, 4) < 1 || Math.hypot(x - FIRE.x, z - FIRE.z) < 7) return false;
     if (rectDist(x, z, FARM, 4) < 1 || rectDist(x, z, DOCK, 3) < 1 || rectDist(x, z, CAMP, 3) < 1) return false;
+    if (x > MINE.x - 8 && x < MINE.x + 9 && z > MINE.face - 4) return false;    // the mine's cliff and yard
     if (x > 36 && x < 92 && z > 62) return false;                    // keep the foreground meadow open
     for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) if (pathCells.has(x + dx + ',' + (z + dz))) return false;
     if (bushes.some(([bx, bz]) => Math.abs(bx - x) < 3 && Math.abs(bz - z) < 3)) return false;
@@ -259,6 +299,10 @@ export function generateWorld() {
     tree(x, z, kind, leaves);
   }
 
+  // Two trees on top of the mine's knoll (planted after the forest so its layout doesn't shift).
+  tree(MINE.x - 2, MINE.face - 6, 'round', B.LEAVES0);
+  tree(MINE.x + 5, MINE.face - 8, 'wide', B.LEAVES2);
+
   // ---- plant spots (filled per season) ----
   const plants = [];
   for (let z = 0; z < D; z++) for (let x = 0; x < W; x++) {
@@ -266,6 +310,7 @@ export function generateWorld() {
     if (get(x, h, z) !== B.GRASS || get(x, h + 1, z) !== B.AIR) continue;
     if (rectDist(x, z, FARM, 1) < 0.5 || rectDist(x, z, DOCK, 0) < 0.5 || rectDist(x, z, CAMP, 0) < 0.5) continue;
     if (bushes.some(([bx, bz]) => bx === x && bz === z)) continue;
+    if (x > MINE.x - 3 && x < MINE.x + 6 && z > MINE.face && z < MINE.face + 9) continue;  // rails and ore piles
     const density = 0.12 + fbm(n1, x * 0.15 + 40, z * 0.15) * 0.35;
     if (r() < density) plants.push({ x, y: h + 1, z, u: r(), k: r(), s: 0.75 + r() * 0.35, ox: (r() - 0.5) * 0.4, oz: (r() - 0.5) * 0.4 });
   }
@@ -273,7 +318,7 @@ export function generateWorld() {
   return {
     W, H, D, WL, G, get, plants, decor, chimney, riverX, naturalHeight,
     ground: (x, z) => H_(Math.floor(x), Math.floor(z)) + 1,
-    farm: FARM, dock: { x: dockX, z: DOCK_Z }, camp: CAMP, fences, bushes,
+    farm: FARM, dock: { x: dockX, z: DOCK_Z }, camp: CAMP, fences, bushes, mine: MINE,
     fire: { x: FIRE.x + 0.5, y: G + 1, z: FIRE.z + 0.5 },
     windows: [{ x: 67, y: G + 3, z: z1 + 1.2 }, { x: 72, y: G + 3, z: z1 + 1.2 }],
   };

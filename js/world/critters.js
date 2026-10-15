@@ -164,7 +164,7 @@ export function createCritters(scene, world) {
   const VISITORS = {
     rabbit(env) {
       const r = makeRabbit(env.season === 'winter');
-      const z0 = 64 + Math.random() * 7;               // stays clear of the tent
+      const z0 = 68 + Math.random() * 3;               // between the mine and the tent
       const stops = [
         { x: 72 + Math.random() * 10, z: z0 + (Math.random() - 0.5) * 4, rest: 4 + Math.random() * 5 },
         { x: 66 + Math.random() * 8, z: z0 + (Math.random() - 0.5) * 5, rest: Math.random() < 0.5 ? 3 + Math.random() * 3 : 0 },

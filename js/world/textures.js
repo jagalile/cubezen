@@ -15,6 +15,7 @@ export const T = {
   leaves1: 8, leaves2: 9, planks: 10, cobble: 11, roof: 12, window: 13, path: 14, birch: 15,
   door: 16, tallGrass: 17, flower0: 18, flower1: 19, flower2: 20, bush: 21,
   farmland: 22, wheat0: 23, wheat1: 24, wheat2: 25, wheat3: 26, stubble: 27,
+  oreCoal: 28, oreCopper: 29, oreGold: 30, oreCrystal: 31,
 };
 const COLS = 8, ROWS = 4, S = 16;
 
@@ -138,13 +139,14 @@ export function createAtlas() {
       noiseFill(px, DIRT, [0.4, 0.3, 0.2, 0.1]);
       for (let i = 0; i < 6; i++) px(Math.floor(r() * S), Math.floor(r() * S), '#5a3822');
     });
-    tile(T.stone, (px) => {
+    const stoneFill = (px) => {
       noiseFill(px, ['#8f8f93', '#828287', '#9c9ca0', '#76767b'], [0.35, 0.3, 0.2, 0.15]);
       for (let i = 0; i < 5; i++) {
         const y = Math.floor(r() * S), x0 = Math.floor(r() * S), len = 2 + Math.floor(r() * 4);
         for (let x = x0; x < x0 + len; x++) px(x % S, y, '#6a6a70');
       }
-    });
+    };
+    tile(T.stone, stoneFill);
     tile(T.sand, (px) => noiseFill(px, ['#e8d7a0', '#dccb92', '#f0e2b0', '#d2c088'], [0.4, 0.3, 0.2, 0.1]));
     tile(T.logSide, (px) => {
       const cols = ['#6b4a2b', '#5c3f24', '#7a5633', '#523720'];
@@ -278,6 +280,24 @@ export function createAtlas() {
     tile(T.wheat2, (px) => stalks(px, 14, 11, 15, ['#8fb848', '#a3c050', '#7aa83e'], ['#d6d070', '#c8c060']));
     tile(T.wheat3, (px) => stalks(px, 14, 12, 15, ['#c8a040', '#d8b450', '#b89038'], ['#e8c860', '#f0d470', '#d0a840']));
     tile(T.stubble, (px) => stalks(px, 12, 1, 3, ['#c8a040', '#a88a3a'], null));
+
+    // ---- ores: stone with chunky veins; the crystal glows a little at night ----
+    const ore = (id, pal, glowColor) => tile(id, (px, glow) => {
+      stoneFill(px);
+      for (let k = 0; k < 6; k++) {
+        const cx = 1 + ((k % 3) * 5 + Math.floor(r() * 3)), cy = 2 + (Math.floor(k / 3) * 7 + Math.floor(r() * 4));
+        for (const [dx, dy] of [[0, 0], [1, 0], [0, 1], [1, 1], [-1, 0], [0, -1], [2, 1], [1, 2]]) {
+          if (Math.abs(dx) + Math.abs(dy) > 1 && r() < 0.4) continue;
+          const c = dy < 0 || dx < 0 ? pal[0] : dx && dy ? pal[2] : pal[1];   // lit top-left, shaded corner
+          px(cx + dx, cy + dy, c);
+          if (glowColor) glow(cx + dx, cy + dy, glowColor);
+        }
+      }
+    });
+    ore(T.oreCoal, ['#56565e', '#26262c', '#141418']);
+    ore(T.oreCopper, ['#ffb070', '#e07f3a', '#6cc4a4']);
+    ore(T.oreGold, ['#fff6b0', '#ffd23e', '#c09020']);
+    ore(T.oreCrystal, ['#e8fbff', '#8fe4f4', '#4ab0d8'], '#4a9ab0');
 
     // Water (or ice in winter): its own repeating texture.
     const wg = waterCanvas.getContext('2d');

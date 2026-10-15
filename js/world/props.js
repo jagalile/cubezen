@@ -1,6 +1,6 @@
 // Hand-built details: the farm's fence, scarecrow, pumpkins and hay bales, a little wooden
-// dock on the river with a moored rowboat, a camping tent by the meadow and fences along the
-// path. Seasonal bits are toggled in setSeason.
+// dock on the river with a moored rowboat, a camping tent by the meadow, fences along the
+// path and the mine's yard (rails, a minecart, tools, ore). Seasonal bits are toggled in setSeason.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { rng } from './textures.js';
@@ -241,6 +241,67 @@ export function createProps(scene, world) {
   scene.add(berryMesh, snowMesh);
   seasonal.autumn.push(berryMesh);
   seasonal.winter.push(snowMesh);
+
+  // ---- the mine's yard: a track out of the tunnel, a loaded minecart, tools and ore piles ----
+  const { mine } = world;
+  const yard = [], yardSnow = [];
+  const ORE = { coal: '#2a2a30', copper: '#c87533', gold: '#e8c040', crystal: '#8fd8e8', rock: '#85858c' };
+  const mx = mine.x + 0.5, railEnd = mine.face + 8;
+  for (let z = mine.face - 6.5; z < railEnd; z += 0.5) {               // sleepers
+    yard.push(piece(1.1, 0.08, 0.22, mx, ground(mx, z) + 0.04, z, wood[Math.round(z * 2) % 3]));
+  }
+  for (const dx of [-0.32, 0.32]) {
+    yard.push(piece(0.08, 0.1, railEnd - mine.face + 6.5, mx + dx, ground(mx, mine.face + 2) + 0.12, (railEnd + mine.face - 6.5) / 2, '#5a5a62'));
+  }
+  yard.push(piece(1.0, 0.4, 0.25, mx, ground(mx, railEnd) + 0.2, railEnd + 0.1, '#6b4a2b'));   // buffer at the end
+  // Minecart: an iron-banded wooden tub on little wheels, heaped with ore.
+  const cartZ = mine.face + 4.5, cartY = ground(mx, cartZ) + 0.22;
+  yard.push(piece(0.95, 0.55, 1.25, mx, cartY + 0.38, cartZ, '#6e6e76'));
+  yard.push(piece(1.0, 0.1, 1.3, mx, cartY + 0.62, cartZ, '#4a4a52'));
+  yard.push(piece(0.8, 0.1, 1.1, mx, cartY + 0.6, cartZ, '#3a2a1e'));
+  for (const [dx, dz] of [[-0.45, -0.38], [0.45, -0.38], [-0.45, 0.38], [0.45, 0.38]]) {
+    yard.push(piece(0.1, 0.26, 0.26, mx + dx, cartY, cartZ + dz, '#2d2d33'));
+  }
+  const kinds = Object.keys(ORE);
+  const chunk = (x, y, z, size, kind, i) => yard.push(piece(size, size, size, x, y + size / 2, z, ORE[kind], i * 0.7));
+  for (let i = 0; i < 9; i++) {                                        // the cart's load
+    chunk(mx + ((i % 3) - 1) * 0.26, cartY + 0.62 + (i % 2) * 0.08, cartZ + (Math.floor(i / 3) - 1) * 0.32, 0.26, kinds[i % 4], i);
+  }
+  // Ore piles beside the track, sorted roughly crateY kind, plus a pile of spoil rock.
+  [[mine.x + 3.2, mine.face + 2.4, 'coal'], [mine.x + 4.6, mine.face + 3.6, 'copper'], [mine.x + 2.6, mine.face + 4.4, 'rock'], [mine.x - 2.4, mine.face + 2.0, 'rock']].forEach(([px, pz, kind], p) => {
+    const py = ground(px, pz);
+    for (let i = 0; i < 9; i++) {
+      const a = i * 2.3 + p, rad = i < 6 ? 0.45 : 0.18, size = kind === 'rock' ? 0.36 : 0.3;
+      chunk(px + Math.cos(a) * rad, py + (i < 6 ? 0 : 0.26), pz + Math.sin(a) * rad, size, kind, i + p);
+    }
+    yardSnow.push(piece(0.7, 0.06, 0.7, px, py + 0.5, pz, '#f4f8fc', p));
+  });
+  // A crate of gold and crystal chunks, and a barrel.
+  const crateX = mine.x + 4.4, crateZ = mine.face + 1.4, crateY = ground(crateX, crateZ);
+  yard.push(piece(0.8, 0.55, 0.8, crateX, crateY + 0.275, crateZ, '#a07446', 0.2));
+  yard.push(piece(0.82, 0.08, 0.82, crateX, crateY + 0.5, crateZ, '#6b4a2b', 0.2));
+  for (let i = 0; i < 4; i++) chunk(crateX + ((i % 2) - 0.5) * 0.3, crateY + 0.52, crateZ + (Math.floor(i / 2) - 0.5) * 0.3, 0.22, i % 2 ? 'gold' : 'crystal', i);
+  yard.push(piece(0.6, 0.8, 0.6, mine.x - 3.0, ground(mine.x - 3, mine.face + 0.9) + 0.4, mine.face + 0.9, '#7a5232'));
+  yard.push(piece(0.62, 0.07, 0.62, mine.x - 3.0, ground(mine.x - 3, mine.face + 0.9) + 0.6, mine.face + 0.9, '#3a3a40'));
+  // Tools leaning on the cliff beside the entrance: a pickaxe and a shovel.
+  const toolZ = mine.face + 1.12, toolY = ground(mine.x - 1.9, toolZ);
+  yard.push(piece(0.08, 1.4, 0.08, mine.x - 2.0, toolY + 0.68, toolZ, '#8a6440', 0, 0.18));
+  yard.push(piece(0.85, 0.12, 0.1, mine.x - 2.12, toolY + 1.34, toolZ, '#7c8088', 0, 0.18));
+  yard.push(piece(0.14, 0.1, 0.1, mine.x - 2.52, toolY + 1.28, toolZ, '#7c8088', 0, 0.6));
+  yard.push(piece(0.14, 0.1, 0.1, mine.x - 1.72, toolY + 1.42, toolZ, '#7c8088', 0, -0.4));
+  yard.push(piece(0.07, 1.25, 0.07, mine.x + 2.05, toolY + 0.72, toolZ, '#8a6440', 0, -0.15));
+  yard.push(piece(0.3, 0.38, 0.05, mine.x + 1.98, toolY + 0.2, toolZ, '#7c8088', 0, -0.15));
+  yard.push(piece(0.24, 0.06, 0.07, mine.x + 2.14, toolY + 1.35, toolZ, '#6b4a2b', 0, -0.15));
+  // A pickaxe left stuck in the coal pile.
+  const pickX = mine.x + 3.2, pickZ = mine.face + 2.4, pickY = ground(pickX, pickZ);
+  yard.push(piece(0.07, 1.0, 0.07, pickX + 0.1, pickY + 0.85, pickZ, '#8a6440', 0, -0.5));
+  yard.push(piece(0.7, 0.1, 0.09, pickX + 0.34, pickY + 1.3, pickZ, '#7c8088', 0, -0.5 + Math.PI / 2 - 0.25));
+  // The darkness inside the tunnel, past the last timber set.
+  yard.push(piece(3, 4, 0.1, mx, world.G + 3, mine.face - 6.9, '#0e0c10'));
+  scene.add(merged(yard));
+  const yardSnowMesh = merged(yardSnow);
+  scene.add(yardSnowMesh);
+  seasonal.winter.push(yardSnowMesh);
 
   const boat = merged([
     piece(2.5, 0.1, 0.95, 0, 0.05, 0, '#9c7448'),
