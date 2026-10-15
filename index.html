@@ -16,12 +16,14 @@
   <div class="vignette" aria-hidden="true"></div>
 
   <div class="tools">
+    <button class="btn" id="btn-widgets" aria-expanded="false" aria-controls="widget-menu" title="Show or hide widgets">Widgets</button>
+    <div class="panel menu" id="widget-menu" hidden></div>
     <button class="btn" id="btn-zen" title="Hide interface (H)">Zen</button>
     <button class="btn" id="btn-fs" title="Fullscreen (F)">Full</button>
   </div>
 
   <div class="ui">
-    <header class="brand">
+    <header class="brand" id="brand">
       <h1>
         <img class="logo" src="icon.svg" alt="">
         Cubezen
@@ -30,50 +32,58 @@
     </header>
 
     <aside class="side">
-      <section class="panel" id="pomodoro" aria-label="Pomodoro timer">
-        <div class="tabs" role="tablist">
-          <button class="tab active" data-mode="focus">Focus</button>
-          <button class="tab" data-mode="short">Short</button>
-          <button class="tab" data-mode="long">Long</button>
-        </div>
-        <div class="time" id="pomo-time">25:00</div>
-        <div class="row">
-          <button class="btn primary" id="pomo-start">Start</button>
-          <button class="btn" id="pomo-reset">Reset</button>
-        </div>
-        <div class="blocks" id="pomo-blocks" aria-hidden="true"></div>
-        <p class="muted center" id="pomo-count"></p>
-      </section>
-
-      <section class="panel" id="world" aria-label="World">
-        <h2>World</h2>
-        <div class="tabs left" id="time-tabs">
-          <button class="tab" data-time="cycle" title="Full day every 20 minutes">Cycle</button>
-          <button class="tab" data-time="clock" title="Follow your local time">Clock</button>
-          <button class="tab" data-time="day">Day</button>
-          <button class="tab" data-time="sunset">Sunset</button>
-          <button class="tab" data-time="night">Night</button>
-        </div>
-        <div class="tabs left" id="season-tabs">
-          <button class="tab" data-season="auto" title="Season from today's date">Auto</button>
-          <button class="tab" data-season="spring">Spring</button>
-          <button class="tab" data-season="summer">Summer</button>
-          <button class="tab" data-season="autumn">Autumn</button>
-          <button class="tab" data-season="winter">Winter</button>
+      <section class="panel widget" id="pomodoro" aria-label="Pomodoro timer">
+        <div class="head"><h2>Timer <span class="peek" id="pomo-peek"></span></h2></div>
+        <div class="fold">
+          <div class="tabs" role="tablist">
+            <button class="tab active" data-mode="focus">Focus</button>
+            <button class="tab" data-mode="short">Short</button>
+            <button class="tab" data-mode="long">Long</button>
+          </div>
+          <div class="time" id="pomo-time">25:00</div>
+          <div class="row">
+            <button class="btn primary" id="pomo-start">Start</button>
+            <button class="btn" id="pomo-reset">Reset</button>
+          </div>
+          <div class="blocks" id="pomo-blocks" aria-hidden="true"></div>
+          <p class="muted center" id="pomo-count"></p>
         </div>
       </section>
 
-      <section class="panel" id="tasks" aria-label="Tasks">
-        <h2>Tasks</h2>
-        <form id="task-form" autocomplete="off">
-          <input id="task-input" placeholder="Add a task…" maxlength="80" aria-label="New task">
-          <button class="btn" aria-label="Add task">+</button>
-        </form>
-        <ul id="task-list"></ul>
+      <section class="panel widget" id="world" aria-label="World">
+        <div class="head"><h2>World</h2></div>
+        <div class="fold">
+          <div class="tabs left" id="time-tabs">
+            <button class="tab" data-time="cycle" title="Full day every 20 minutes">Cycle</button>
+            <button class="tab" data-time="clock" title="Follow your local time">Clock</button>
+            <button class="tab" data-time="day">Day</button>
+            <button class="tab" data-time="sunset">Sunset</button>
+            <button class="tab" data-time="night">Night</button>
+          </div>
+          <div class="tabs left" id="season-tabs">
+            <button class="tab" data-season="auto" title="Season from today's date">Auto</button>
+            <button class="tab" data-season="spring">Spring</button>
+            <button class="tab" data-season="summer">Summer</button>
+            <button class="tab" data-season="autumn">Autumn</button>
+            <button class="tab" data-season="winter">Winter</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel widget" id="tasks" aria-label="Tasks">
+        <div class="head"><h2>Tasks</h2></div>
+        <div class="fold">
+          <form id="task-form" autocomplete="off">
+            <input id="task-input" placeholder="Add a task…" maxlength="80" aria-label="New task">
+            <button class="btn" aria-label="Add task">+</button>
+          </form>
+          <ul id="task-list"></ul>
+        </div>
       </section>
     </aside>
 
-    <footer class="player panel">
+    <footer class="player panel widget" id="player" aria-label="Music">
+      <div class="head"></div>
       <button class="btn primary play" id="btn-play" aria-label="Play music" title="Play / pause (Space)">
         <svg class="i-play" viewBox="0 0 10 10" shape-rendering="crispEdges" aria-hidden="true">
           <rect x="2" y="1" width="2" height="8"/><rect x="4" y="2" width="2" height="6"/>
@@ -87,9 +97,9 @@
         <span class="label">Now playing</span>
         <span id="track">Press play</span>
       </div>
-      <label class="mix"><span>Music</span><input type="range" id="vol-music" min="0" max="1" step="0.01"></label>
-      <label class="mix"><span>Rain</span><input type="range" id="vol-rain" min="0" max="1" step="0.01"></label>
-      <label class="mix"><span>Fire</span><input type="range" id="vol-fire" min="0" max="1" step="0.01"></label>
+      <label class="mix fold"><span>Music</span><input type="range" id="vol-music" min="0" max="1" step="0.01"></label>
+      <label class="mix fold"><span>Rain</span><input type="range" id="vol-rain" min="0" max="1" step="0.01"></label>
+      <label class="mix fold"><span>Fire</span><input type="range" id="vol-fire" min="0" max="1" step="0.01"></label>
     </footer>
 
     <p class="legal">Original music &amp; art. Not affiliated with Mojang or Microsoft.</p>

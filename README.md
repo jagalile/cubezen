@@ -15,6 +15,7 @@ All art and music are original. The music is composed and synthesised live in th
 - **Ambience**: rain and fire with their own volume; the rain and the campfire in the scene follow their sliders.
 - **Pomodoro**: 25-minute focus with 5 and 15-minute breaks, a chime when time is up and a count of today's sessions.
 - **Tasks**: a simple list for the session.
+- **Your own layout**: every widget can be minimized (`−`) or hidden (`×`); the **Widgets** menu brings hidden ones back, and the layout is remembered.
 - **Zen mode**: hides the interface and leaves only the landscape.
 
 Preferences, tasks and stats are saved in your browser (`localStorage`); there are no accounts and no server.
@@ -54,7 +55,7 @@ Handy for previews and screenshots:
 
 - `index.html`: interface and the Three.js import map
 - `css/style.css`: pixel-art UI
-- `js/app.js`: mixer, pomodoro, tasks, world panel and shortcuts
+- `js/app.js`: mixer, pomodoro, tasks, world panel, widget layout and shortcuts
 - `js/composer.js`: generative composer (modes, voicings, motifs, piece structure); pure JS, no audio
 - `js/audio.js`: synthesised piano and pad that perform the composer's pieces, plus rain and fire
 - `js/world/main.js`: rendering, sky, day/night lighting, seasons and particles

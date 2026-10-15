@@ -51,6 +51,7 @@
 
   function renderPomodoro() {
     $('#pomo-time').textContent = fmt(remaining);
+    $('#pomo-peek').textContent = fmt(remaining);
     $('#pomo-start').textContent = running ? 'Pause' : 'Start';
     document.title = running ? `${fmt(remaining)} · ${LABEL[mode]} — Cubezen` : 'Cubezen — cozy blocky lofi';
     document.querySelectorAll('#pomodoro .tab').forEach((t) => t.classList.toggle('active', t.dataset.mode === mode));
@@ -144,6 +145,68 @@
   });
   renderTasks();
 
+  // ---------- widgets: minimize / hide ----------
+  // layout[id] is 'min', 'hidden' or missing (open).
+  const WIDGETS = { pomodoro: 'Timer', world: 'World', tasks: 'Tasks', player: 'Music', brand: 'Title' };
+  const layout = store.get('layout', {});
+  const menu = $('#widget-menu');
+  const menuBtn = $('#btn-widgets');
+
+  function setLayout(id, state) {
+    if (state) layout[id] = state; else delete layout[id];
+    store.set('layout', layout);
+    renderLayout();
+  }
+
+  function renderLayout() {
+    for (const [id, name] of Object.entries(WIDGETS)) {
+      const el = document.getElementById(id);
+      const min = layout[id] === 'min';
+      el.hidden = layout[id] === 'hidden';
+      el.classList.toggle('min', min);
+      const minBtn = el.querySelector('[data-act=min]');
+      if (minBtn) {
+        minBtn.textContent = min ? '+' : '−';
+        minBtn.setAttribute('aria-label', `${min ? 'Expand' : 'Minimize'} ${name}`);
+        minBtn.setAttribute('aria-expanded', String(!min));
+      }
+      menu.querySelector(`[data-widget=${id}]`).setAttribute('aria-pressed', String(!el.hidden));
+    }
+  }
+
+  for (const [id, name] of Object.entries(WIDGETS)) {
+    const item = document.createElement('button');
+    item.className = 'menu-item';
+    item.dataset.widget = id;
+    item.innerHTML = '<span class="check"></span>';
+    item.append(name);
+    item.addEventListener('click', () => setLayout(id, layout[id] === 'hidden' ? null : 'hidden'));
+    menu.append(item);
+
+    const head = document.querySelector(`#${id} > .head`);
+    if (!head) continue;
+    const win = document.createElement('div');
+    win.className = 'win';
+    const minBtn = document.createElement('button');
+    minBtn.dataset.act = 'min';
+    minBtn.addEventListener('click', () => setLayout(id, layout[id] === 'min' ? null : 'min'));
+    const hideBtn = document.createElement('button');
+    hideBtn.textContent = '×';
+    hideBtn.setAttribute('aria-label', `Hide ${name}`);
+    hideBtn.title = 'Hide (bring it back from Widgets)';
+    hideBtn.addEventListener('click', () => setLayout(id, 'hidden'));
+    win.append(minBtn, hideBtn);
+    head.append(win);
+  }
+  renderLayout();
+
+  const toggleMenu = (open = menu.hidden) => {
+    menu.hidden = !open;
+    menuBtn.setAttribute('aria-expanded', String(open));
+  };
+  menuBtn.addEventListener('click', () => toggleMenu());
+  document.addEventListener('click', (e) => { if (!e.target.closest('#widget-menu, #btn-widgets')) toggleMenu(false); });
+
   // ---------- zen, fullscreen, shortcuts ----------
   const toggleZen = () => document.body.classList.toggle('zen');
   const toggleFullscreen = () => {
@@ -154,6 +217,7 @@
   $('#btn-fs').addEventListener('click', toggleFullscreen);
 
   document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') toggleMenu(false);
     if (e.target.closest('input, textarea') || e.ctrlKey || e.metaKey || e.altKey) return;
     if (e.code === 'Space' && !e.target.closest('button')) { e.preventDefault(); togglePlay(); }
     else if (e.key === 'h' || e.key === 'H') toggleZen();

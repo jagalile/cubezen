@@ -25,7 +25,7 @@ Preview overrides via URL: `?time=day|sunset|night|clock|cycle`, `?t=0.72` (0 = 
 Two independent halves talk through globals, so the UI still works if the 3D module fails to load:
 
 - **3D world** (`js/world/*.js`, ES modules, Three.js 0.160 via import map from jsdelivr in `index.html`). `main.js` is the entry point and exposes `window.Scene` (`setRain`, `setFire`, `setTimeMode`, `setSeason`, `state`). `app.js` falls back to a stub `Scene` if it's missing.
-- **Classic scripts** (`defer`, load order matters): `composer.js` → `globalThis.Composer`, `audio.js` → `window.Ambience`, `app.js` (UI wiring, localStorage keys `cubezen.prefs`, `cubezen.stats`, `cubezen.world`, `cubezen.tasks`).
+- **Classic scripts** (`defer`, load order matters): `composer.js` → `globalThis.Composer`, `audio.js` → `window.Ambience`, `app.js` (UI wiring, localStorage keys `cubezen.prefs`, `cubezen.stats`, `cubezen.world`, `cubezen.tasks`, `cubezen.layout`).
 
 World pipeline:
 - `build.js` `generateWorld()` fills a voxel grid (block ids in `B`) and exports shared layout (`ground()`, `riverX(z)`, `farm`, `dock`) that `props.js` and `critters.js` use to place things. Changing terrain/river/cabin positions means checking those consumers and the camera (`CAM_POS`/`CAM_TARGET` in `main.js`).
