@@ -62,16 +62,16 @@ export function generateWorld() {
 
   const riverX = (z) => 32 + 9 * Math.sin(z * 0.055) + 4 * Math.sin(z * 0.16 + 1);
   const CABIN = { x0: 64, x1: 74, z0: 52, z1: 59 };
-  const FIRE = { x: 59, z: 70 };
+  const FIRE = { x: 62, z: 72 };
+  const CAMP = { x0: 68, x1: 75, z0: 75, z1: 82 };                 // the tent, woodpile and crates
   const FARM = { x0: 39, x1: 49, z0: 60, z1: 67, waterZ: 63 };
   const DOCK_Z = 46, dockX = riverX(DOCK_Z);
   const DOCK = { x0: dockX, x1: dockX + 7, z0: DOCK_Z - 2, z1: DOCK_Z + 3 };
   const rectDist = (x, z, q, m) => Math.hypot(Math.max(q.x0 - m - x, 0, x - q.x1 - m), Math.max(q.z0 - m - z, 0, z - q.z1 - m));
 
   // ---- heightmap ----
-  const height = new Int16Array(W * D);
-  const riverDist = new Float32Array(W * D);
-  for (let z = 0; z < D; z++) for (let x = 0; x < W; x++) {
+  // Natural terrain (hills behind, rising edges, the river valley); buildFar continues it past the map.
+  const naturalHeight = (x, z) => {
     const d = Math.abs(x - riverX(z));
     let h = 7 + fbm(n1, x * 0.07, z * 0.07) * 2.4;
     h += smooth(64, 12, z) * Math.pow(fbm(n2, x * 0.04, z * 0.04), 1.3) * 30;
@@ -79,7 +79,14 @@ export function generateWorld() {
     const carve = smooth(16, 4.5, d);
     h = h * (1 - carve) + (WL - 0.5) * carve;
     if (d < 3.2) h = WL - 2 - (d < 1.6 ? 1 : 0);
-    const flat = Math.max(smooth(7, 1, rectDist(x, z, CABIN, 3)), smooth(8, 2, Math.hypot(x - FIRE.x, z - FIRE.z)), smooth(5, 1, rectDist(x, z, FARM, 2)));
+    return h;
+  };
+  const height = new Int16Array(W * D);
+  const riverDist = new Float32Array(W * D);
+  for (let z = 0; z < D; z++) for (let x = 0; x < W; x++) {
+    const d = Math.abs(x - riverX(z));
+    let h = naturalHeight(x, z);
+    const flat = Math.max(smooth(7, 1, rectDist(x, z, CABIN, 3)), smooth(8, 2, Math.hypot(x - FIRE.x, z - FIRE.z)), smooth(5, 1, rectDist(x, z, FARM, 2)), smooth(6, 1, rectDist(x, z, CAMP, 1)));
     h = h * (1 - flat) + G * flat;
     height[z * W + x] = Math.round(h);
     riverDist[z * W + x] = d;
@@ -106,8 +113,15 @@ export function generateWorld() {
     if (z === FARM.waterZ) set(x, h - 1, z, B.DIRT);
   }
 
-  // ---- path from the campfire to the door and towards the viewer ----
-  const pathCells = new Set();
+  // ---- stone hearth under the campfire ----
+  for (let dz = -3; dz <= 3; dz++) for (let dx = -3; dx <= 3; dx++) {
+    if (Math.hypot(dx, dz) > 2.3) continue;
+    const x = FIRE.x + dx, z = FIRE.z + dz;
+    if (get(x, G, z) === B.GRASS) set(x, G, z, B.COBBLE);
+  }
+
+  // ---- path from the viewer, past the campfire, to the door ----
+  const pathCells = new Set(), rPath = rng(31);
   const door = { x: 69, z: CABIN.z1 + 3 };
   function path(x0, z0, x1, z1) {
     const steps = Math.ceil(Math.hypot(x1 - x0, z1 - z0));
@@ -115,15 +129,16 @@ export function generateWorld() {
       const t = i / steps;
       const x = Math.round(x0 + (x1 - x0) * t + Math.sin(t * 6) * 0.8), z = Math.round(z0 + (z1 - z0) * t);
       for (const [dx, dz] of [[0, 0], [1, 0], [0, 1], [1, 1]]) {
-        if (r() < 0.12 && dx + dz > 0) continue;
+        if (rPath() < 0.12 && dx + dz > 0) continue;
         const px = x + dx, pz = z + dz;
         pathCells.add(px + ',' + pz);
         if (get(px, H_(px, pz), pz) === B.GRASS) set(px, H_(px, pz), pz, B.PATH);
       }
     }
   }
-  path(FIRE.x + 1, FIRE.z - 2, door.x, door.z);
-  path(FIRE.x - 1, FIRE.z + 2, FIRE.x - 6, D - 1);
+  path(58, 68, door.x, door.z);
+  path(57, 79, 58, 68);
+  path(55, D - 1, 57, 79);
 
   // ---- cabin ----
   const { x0, x1, z0, z1 } = CABIN;
@@ -156,14 +171,14 @@ export function generateWorld() {
   decor.push({ type: 'lantern', x: 66.5, y: G + 4.35, z: z1 + 3.5, hanging: true });
   decor.push({ type: 'lantern', x: 72.5, y: G + 4.35, z: z1 + 3.5, hanging: true });
 
-  // Benches around the fire.
+  // Log benches on two sides of the hearth, facing the view.
+  set(FIRE.x + 3, G + 1, FIRE.z - 1, B.LOG);
   set(FIRE.x + 3, G + 1, FIRE.z, B.LOG);
-  set(FIRE.x + 3, G + 1, FIRE.z + 1, B.LOG);
-  set(FIRE.x - 2, G + 1, FIRE.z - 3, B.LOG);
-  set(FIRE.x - 1, G + 1, FIRE.z - 3, B.LOG);
+  set(FIRE.x, G + 1, FIRE.z - 3, B.LOG);
+  set(FIRE.x + 1, G + 1, FIRE.z - 3, B.LOG);
 
-  // Lantern posts along the path.
-  for (const [lx, lz] of [[63, 66], [57, 80], [55, 90]]) {
+  // Lantern posts along the path and one by the tent.
+  for (const [lx, lz] of [[62, 67], [60, 82], [53, 92], [68, 77]]) {
     const y = H_(lx, lz) + 1;
     decor.push({ type: 'post', x: lx + 0.5, y, z: lz + 0.5 });
     decor.push({ type: 'lantern', x: lx + 0.5, y: y + 1.5, z: lz + 0.5 });
@@ -173,13 +188,19 @@ export function generateWorld() {
   decor.push({ type: 'post', x: dockX + 0.55, y: WL + 1.25, z: DOCK_Z + 1.45 });
   decor.push({ type: 'lantern', x: dockX + 0.55, y: WL + 2.75, z: DOCK_Z + 1.45 });
 
+  // ---- along the path: a few bushes and short runs of fence ----
+  const bushes = [[60, 79, 1], [61, 80, 0], [54, 75, 1], [55, 76, 0], [65, 65, 1], [66, 64, 0], [59, 63, 1], [52, 86, 1], [61, 84, 0], [76, 83, 1], [77, 80, 0]];   // [x, z, big]
+  const fences = [[55, 78, 55, 81], [59, 81, 61, 81], [53, 88, 53, 90]];        // [x0, z0, x1, z1], posts at each cell
+
   // ---- trees ----
   const taken = new Uint8Array(W * D);
   const canGrow = (x, z) => {
     if (x < 2 || z < 2 || x > W - 3 || z > D - 3) return false;
     if (riverDist[z * W + x] < 6.5 || rectDist(x, z, CABIN, 4) < 1 || Math.hypot(x - FIRE.x, z - FIRE.z) < 7) return false;
-    if (rectDist(x, z, FARM, 4) < 1 || rectDist(x, z, DOCK, 3) < 1) return false;
+    if (rectDist(x, z, FARM, 4) < 1 || rectDist(x, z, DOCK, 3) < 1 || rectDist(x, z, CAMP, 3) < 1) return false;
+    if (x > 36 && x < 92 && z > 62) return false;                    // keep the foreground meadow open
     for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) if (pathCells.has(x + dx + ',' + (z + dz))) return false;
+    if (bushes.some(([bx, bz]) => Math.abs(bx - x) < 3 && Math.abs(bz - z) < 3)) return false;
     if (get(x, H_(x, z), z) !== B.GRASS) return false;
     for (let dz = -3; dz <= 3; dz++) for (let dx = -3; dx <= 3; dx++) if (taken[(z + dz) * W + x + dx]) return false;
     return true;
@@ -243,15 +264,16 @@ export function generateWorld() {
   for (let z = 0; z < D; z++) for (let x = 0; x < W; x++) {
     const h = H_(x, z);
     if (get(x, h, z) !== B.GRASS || get(x, h + 1, z) !== B.AIR) continue;
-    if (rectDist(x, z, FARM, 1) < 0.5 || rectDist(x, z, DOCK, 0) < 0.5) continue;
+    if (rectDist(x, z, FARM, 1) < 0.5 || rectDist(x, z, DOCK, 0) < 0.5 || rectDist(x, z, CAMP, 0) < 0.5) continue;
+    if (bushes.some(([bx, bz]) => bx === x && bz === z)) continue;
     const density = 0.12 + fbm(n1, x * 0.15 + 40, z * 0.15) * 0.35;
     if (r() < density) plants.push({ x, y: h + 1, z, u: r(), k: r(), s: 0.75 + r() * 0.35, ox: (r() - 0.5) * 0.4, oz: (r() - 0.5) * 0.4 });
   }
 
   return {
-    W, H, D, WL, G, get, plants, decor, chimney, riverX,
+    W, H, D, WL, G, get, plants, decor, chimney, riverX, naturalHeight,
     ground: (x, z) => H_(Math.floor(x), Math.floor(z)) + 1,
-    farm: FARM, dock: { x: dockX, z: DOCK_Z },
+    farm: FARM, dock: { x: dockX, z: DOCK_Z }, camp: CAMP, fences, bushes,
     fire: { x: FIRE.x + 0.5, y: G + 1, z: FIRE.z + 0.5 },
     windows: [{ x: 67, y: G + 3, z: z1 + 1.2 }, { x: 72, y: G + 3, z: z1 + 1.2 }],
   };
@@ -383,18 +405,47 @@ export function buildPlants(world, seasonName) {
   return geometry(pos, nor, uv, col, index);
 }
 
-// Distant blocky mountains beyond the map: coarse columns that the fog turns into haze.
+// The land beyond the map: the same hills and river carry on at half the voxel detail, then rise
+// into coarser mountains that the fog turns into haze. Forests are individual blocky canopies.
 export function buildFar(world, seasonName) {
   const season = SEASONS[seasonName];
-  const n = valueNoise(11), r = rng(5);
-  const S = 4, pos = [], nor = [], uv = [], col = [], index = [];
-  const top = new THREE.Color(), side = new THREE.Color();
-  const heightAt = (x, z) => {
-    const t = smooth(0, -150, z);                        // 0 at the map edge, 1 far away
-    let h = 7 + t * (8 + Math.pow(fbm(n, x * 0.012, z * 0.012), 1.3) * 85);
-    const carve = smooth(34, 6, Math.abs(x - world.riverX(z))) * (1 - t * 0.6);
-    h = h * (1 - carve) + 5 * carve;                      // the river valley continues
-    return Math.round(h / 2) * 2;
+  const { W, D, WL, riverX } = world;
+  const n = valueNoise(11), nForest = valueNoise(12), nTint = valueNoise(13);
+  const hash = (x, z) => { const s = Math.sin(x * 12.9898 + z * 78.233) * 43758.5453; return s - Math.floor(s); };
+  const pos = [], nor = [], uv = [], col = [], index = [];
+  const waterY = WL + 1 - 0.14;
+  const water = new THREE.Color(season.snow ? '#c4e0f2' : '#4a82cf');
+  const sand = new THREE.Color('#e0cf98'), stone = new THREE.Color('#8d8f96'), snow = new THREE.Color('#f2f6fb');
+
+  // Terrain only (no trees), so neighbouring cells agree on it.
+  const ground = (x, z) => {
+    const out = Math.max(-z, -x, x - (W - 1), 0);                       // distance beyond the map
+    const t = smooth(10, 200, out), d = Math.abs(x - riverX(z));
+    // Past the edge the valley opens into gentle slopes down to the river.
+    let h = world.naturalHeight(x, z);
+    h -= (h - WL) * smooth(44, 5, d) * smooth(0, 24, out) * 0.75;
+    const valley = smooth(60, 6, d) * (1 - t * 0.5);
+    return h + t * (6 + Math.pow(fbm(n, x * 0.012, z * 0.012), 1.3) * 90) * (1 - valley);
+  };
+  const cell = (x, z, S) => {
+    const cx = x + S / 2, cz = z + S / 2;
+    const d = Math.abs(cx - riverX(cz));
+    const h = Math.round(ground(cx, cz));
+    if (d < 3.4) return { top: waterY, color: water };
+    const c = new THREE.Color();
+    let top = h;
+    const tint = 0.9 + fbm(nTint, cx * 0.08, cz * 0.08) * 0.2 + (hash(x, z) - 0.5) * 0.06;
+    const forest = fbm(nForest, cx * 0.035, cz * 0.035) > 0.47 - Math.min(0.12, h * 0.002);
+    if ((season.snow && h > 30) || h > 88) c.copy(snow);
+    else if (h > 60) c.copy(stone).multiplyScalar(0.9 + hash(z, x) * 0.2);
+    else if (d < 6.5 && h <= WL + 1) c.copy(sand);
+    else if (forest && d > 7 && hash(x, z) < 0.8) {
+      const leaves = season.leaves[Math.floor(hash(z + 3, x) * 3)];
+      c.set(leaves[Math.floor(hash(x + 7, z) * leaves.length)]);
+      top = h + (S > 2 ? 4 : 2) + Math.floor(hash(x - 5, z) * 2);       // a canopy above the ground
+    } else c.set(season.grass[0]);
+    c.multiplyScalar(tint);
+    return { top, color: c };
   };
   const quad = (a, b, c, d, normal, color) => {
     const base = pos.length / 3;
@@ -402,15 +453,22 @@ export function buildFar(world, seasonName) {
     for (let i = 0; i < 4; i++) { nor.push(...normal); uv.push(0, 0); col.push(color.r, color.g, color.b); }
     index.push(base, base + 1, base + 2, base, base + 2, base + 3);
   };
-  for (let z = -240; z < 0; z += S) for (let x = -160; x < world.W + 160; x += S) {
-    const h = heightAt(x, z);
-    const forest = r() < 0.7 && h < 60;
-    top.set(season.snow && h > 30 ? '#f2f6fb' : forest ? season.leaves[Math.floor(r() * 3)][0] : season.grass[0]);
-    side.copy(top).multiplyScalar(0.7);
-    quad([x, h, z + S], [x + S, h, z + S], [x + S, h, z], [x, h, z], [0, 1, 0], top);
-    if (heightAt(x, z + S) < h && z + S < 0) quad([x, 0, z + S], [x + S, 0, z + S], [x + S, h, z + S], [x, h, z + S], [0, 0, 1], side);
-    if (heightAt(x - S, z) < h) quad([x, 0, z], [x, 0, z + S], [x, h, z + S], [x, h, z], [-1, 0, 0], side);
-    if (heightAt(x + S, z) < h) quad([x + S, 0, z + S], [x + S, 0, z], [x + S, h, z], [x + S, h, z + S], [1, 0, 0], side);
+  const side = new THREE.Color();
+  const inMap = (x, z) => x >= 0 && x < W && z >= 0 && z < D;
+  // Near band at 2 blocks per cell (around the map too), far band at 4.
+  for (const [S, z0, z1, x0, x1] of [[2, -72, D, -100, W + 100], [4, -240, -72, -160, W + 160]]) {
+    for (let z = z0; z < z1; z += S) for (let x = x0; x < x1; x += S) {
+      if (inMap(x, z)) continue;
+      const { top, color } = cell(x, z, S);
+      quad([x, top, z + S], [x + S, top, z + S], [x + S, top, z], [x, top, z], [0, 1, 0], color);
+      side.copy(color).multiplyScalar(0.72);
+      const front = cell(x, z + S, S).top;
+      if (front < top && !inMap(x, z + S)) quad([x, front, z + S], [x + S, front, z + S], [x + S, top, z + S], [x, top, z + S], [0, 0, 1], side);
+      side.copy(color).multiplyScalar(0.82);
+      const left = cell(x - S, z, S).top, right = cell(x + S, z, S).top;
+      if (left < top && !inMap(x - S, z)) quad([x, left, z], [x, left, z + S], [x, top, z + S], [x, top, z], [-1, 0, 0], side);
+      if (right < top && !inMap(x + S, z)) quad([x + S, right, z + S], [x + S, right, z], [x + S, top, z], [x + S, top, z + S], [1, 0, 0], side);
+    }
   }
   return geometry(pos, nor, uv, col, index);
 }

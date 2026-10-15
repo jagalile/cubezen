@@ -1,5 +1,6 @@
-// Hand-built details: the farm's fence, scarecrow, pumpkins and hay bales, and a little
-// wooden dock on the river with a moored rowboat. Seasonal bits are toggled in setSeason.
+// Hand-built details: the farm's fence, scarecrow, pumpkins and hay bales, a little wooden
+// dock on the river with a moored rowboat, a camping tent by the meadow and fences along the
+// path. Seasonal bits are toggled in setSeason.
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { rng } from './textures.js';
@@ -8,8 +9,9 @@ const vcMat = new THREE.MeshLambertMaterial({ vertexColors: true });
 const tmp = new THREE.Color();
 
 // A box baked into world space with a flat vertex colour, ready to be merged.
-function piece(w, h, d, x, y, z, color, rotY = 0) {
+function piece(w, h, d, x, y, z, color, rotY = 0, rotZ = 0) {
   const g = new THREE.BoxGeometry(w, h, d);
+  if (rotZ) g.rotateZ(rotZ);
   if (rotY) g.rotateY(rotY);
   g.translate(x, y, z);
   tmp.set(color);
@@ -60,6 +62,10 @@ export function createProps(scene, world) {
   for (let x = farm.x0 - 1; x <= farm.x1 + 1; x++) cells.push([x, farm.z0 - 1, 'x'], [x, farm.z1 + 1, 'x']);
   for (let z = farm.z0; z <= farm.z1; z++) cells.push([farm.x0 - 1, z, 'z'], [farm.x1 + 1, z, 'z']);
   const isGate = (x, z) => x === farm.x1 + 1 && (z === farm.z0 + 4 || z === farm.z0 + 5);
+  // Short runs beside the path.
+  for (const [x0, z0, x1, z1] of world.fences) {
+    for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) cells.push([x, z]);
+  }
   const posts = new Set(cells.filter(([x, z]) => !isGate(x, z)).map(([x, z]) => x + ',' + z));
   for (const [x, z] of cells) {
     if (isGate(x, z)) continue;
@@ -153,6 +159,88 @@ export function createProps(scene, world) {
   const deckSnow = merged([piece(4.2, 0.05, 1.7, dock.x + 4.1, deckY + 0.085, dock.z, '#f4f8fc'), piece(1.6, 0.05, 3.3, dock.x + 1.2, deckY + 0.085, dock.z, '#f4f8fc'), piece(0.6, 0.05, 0.6, dock.x + 5.3, deckY + 0.83, dock.z - 0.35, '#f4f8fc')]);
   scene.add(deckSnow);
   seasonal.winter.push(deckSnow);
+
+  // ---- camp: an A-frame tent facing the fire, a woodpile, crates and a chopping stump ----
+  const { camp } = world;
+  const tx = camp.x0 + 3.2, tz = camp.z0 + 3.6, ty = ground(tx, tz);
+  const facing = Math.atan2(58 - tx, 90 - tz);                        // open towards the fire and the viewer
+  const tent = new THREE.Group();
+  const canvas = '#dccaa0', shade = '#b9a47c', inside = '#4a3826', trim = '#a8553a';
+  const half = 1.35, tall = 1.9, len = 3.0, slant = Math.hypot(half, tall), pitch = Math.atan2(tall, half);
+  const tentParts = [
+    piece(slant, 0.08, len, -half / 2, tall / 2, 0, canvas, 0, pitch),
+    piece(slant, 0.08, len, half / 2, tall / 2, 0, shade, 0, -pitch),
+    piece(0.1, 0.12, len, -half + 0.05, 0.06, 0, trim),                 // red hems along the bottom
+    piece(0.1, 0.12, len, half - 0.05, 0.06, 0, trim),
+    piece(0.12, 0.12, len + 0.5, 0, tall + 0.02, 0, '#6b4a2b'),       // ridge pole
+    piece(0.1, tall + 0.1, 0.1, 0, (tall + 0.1) / 2, len / 2 + 0.2, '#6b4a2b'),
+    piece(0.1, tall + 0.1, 0.1, 0, (tall + 0.1) / 2, -len / 2 - 0.2, '#6b4a2b'),
+    piece(2.2, 0.04, len - 0.2, 0, 0.02, 0, inside),                   // groundsheet
+    piece(0.8, 0.14, 1.8, -0.25, 0.09, -0.3, '#5d7aa8'),               // bedroll and pillow
+    piece(0.5, 0.12, 0.35, -0.25, 0.2, -1.0, '#e8e0d0'),
+  ];
+  // Stepped back wall and front flaps tied open (blocky triangles).
+  for (let i = 0; i < 5; i++) {
+    const w = (half * 2 - 0.1) * (1 - i / 5), y = (i + 0.5) * (tall / 5);
+    tentParts.push(piece(w, tall / 5, 0.06, 0, y, -len / 2 + 0.03, shade));
+    const fw = w * 0.32;
+    for (const side of [-1, 1]) tentParts.push(piece(fw, tall / 5, 0.06, side * (w / 2 - fw / 2), y, len / 2 - 0.03, side < 0 ? canvas : shade));
+  }
+  tent.add(merged(tentParts));
+  const tentSnow = merged([
+    piece(slant * 0.9, 0.06, len + 0.05, -half / 2 - 0.03, tall / 2 + 0.05, 0, '#f4f8fc', 0, pitch),
+    piece(slant * 0.9, 0.06, len + 0.05, half / 2 + 0.03, tall / 2 + 0.05, 0, '#f4f8fc', 0, -pitch),
+  ]);
+  tent.add(tentSnow);
+  seasonal.winter.push(tentSnow);
+  tent.position.set(tx, ty, tz);
+  tent.rotation.y = facing;
+  tent.scale.setScalar(1.2);
+  scene.add(tent);
+
+  const camping = [];
+  // Woodpile: logs stacked 3-2-1 with light cut ends, against the side of the tent.
+  const wx = camp.x0 + 6.2, wz = camp.z0 + 2.4, wy = ground(wx, wz);
+  [[-0.36, 0], [0, 0], [0.36, 0], [-0.18, 1], [0.18, 1], [0, 2]].forEach(([dx, row], i) => {
+    const y = wy + 0.17 + row * 0.31;
+    camping.push(piece(0.32, 0.32, 1.3, wx + dx, y, wz, wood[i % 3]));
+    for (const e of [-0.655, 0.655]) camping.push(piece(0.24, 0.24, 0.02, wx + dx, y, wz + e, '#d8b888'));
+  });
+  // Crates by the tent's front corner, one on top of the other.
+  const cx = camp.x0 + 0.6, cz = camp.z0 + 4.4, cy = ground(cx, cz);
+  for (const [dx, dy, dz, s, rot] of [[0, 0, 0, 0.75, 0.15], [0.85, 0, 0.2, 0.65, -0.2], [0.05, 0.75, 0.05, 0.6, 0.5]]) {
+    camping.push(piece(s, s, s, cx + dx, cy + dy + s / 2, cz + dz, '#a07446', rot));
+    camping.push(piece(s + 0.02, 0.08, s + 0.02, cx + dx, cy + dy + s * 0.75, cz + dz, '#6b4a2b', rot));
+    camping.push(piece(s + 0.02, 0.08, s + 0.02, cx + dx, cy + dy + s * 0.25, cz + dz, '#6b4a2b', rot));
+  }
+  // Chopping stump with an axe, near the woodpile.
+  const kx = camp.x0 + 5.6, kz = camp.z0 + 6.0, ky = ground(kx, kz);
+  camping.push(piece(0.7, 0.5, 0.7, kx, ky + 0.25, kz, '#6e4c2c'));
+  camping.push(piece(0.6, 0.02, 0.6, kx, ky + 0.51, kz, '#c8a070'));
+  camping.push(piece(0.08, 0.75, 0.08, kx + 0.12, ky + 0.82, kz, '#8a6440', 0, -0.35));
+  camping.push(piece(0.3, 0.2, 0.06, kx + 0.02, ky + 0.56, kz, '#9aa0aa', 0, -0.35));
+  scene.add(merged(camping));
+
+  // ---- bushes along the path: evergreen clumps, with berries in autumn and snow in winter ----
+  const bushGreens = ['#3f6e34', '#4b7d3a', '#365f2e'];
+  const berries = [], bushSnow = [], bushParts = [];
+  world.bushes.forEach(([x, z, big], i) => {
+    const bx = x + 0.5, bz = z + 0.5, by = ground(bx, bz), s = big ? 1.25 : 0.85;
+    for (const [dx, dy, dz, w] of [[0, 0, 0, 1], [0.35, -0.12, 0.2, 0.75], [-0.3, -0.1, -0.15, 0.8], [0.05, 0.3, -0.05, 0.6]]) {
+      const size = w * s;
+      bushParts.push(piece(size, size * 0.8, size, bx + dx * s, by + size * 0.4 + dy * s + (dy > 0 ? 0.25 * s : 0), bz + dz * s, bushGreens[(i + Math.round(w * 10)) % 3], i + w));
+    }
+    for (let k = 0; k < 5; k++) {
+      const a = k * 2.4 + i, rad = 0.52 * s;
+      berries.push(piece(0.1, 0.1, 0.1, bx + Math.cos(a) * rad, by + (0.35 + (k % 3) * 0.18) * s, bz + Math.sin(a) * rad, '#c8322a'));
+    }
+    bushSnow.push(piece(0.7 * s, 0.07, 0.7 * s, bx, by + 0.86 * s, bz, '#f4f8fc', i));
+  });
+  scene.add(merged(bushParts));
+  const berryMesh = merged(berries), snowMesh = merged(bushSnow);
+  scene.add(berryMesh, snowMesh);
+  seasonal.autumn.push(berryMesh);
+  seasonal.winter.push(snowMesh);
 
   const boat = merged([
     piece(2.5, 0.1, 0.95, 0, 0.05, 0, '#9c7448'),

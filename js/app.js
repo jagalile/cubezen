@@ -208,7 +208,14 @@
   document.addEventListener('click', (e) => { if (!e.target.closest('#widget-menu, #btn-widgets')) toggleMenu(false); });
 
   // ---------- zen, fullscreen, shortcuts ----------
-  const toggleZen = () => document.body.classList.toggle('zen');
+  const tools = $('.tools');
+  const toggleZen = () => {
+    const zen = document.body.classList.toggle('zen');
+    // Go straight to the faded buttons even though the pointer is still on "Zen".
+    document.body.classList.toggle('zen-fresh', zen);
+    if (zen) toggleMenu(false);
+  };
+  tools.addEventListener('pointerleave', () => document.body.classList.remove('zen-fresh'));
   const toggleFullscreen = () => {
     if (document.fullscreenElement) document.exitFullscreen();
     else document.documentElement.requestFullscreen?.();

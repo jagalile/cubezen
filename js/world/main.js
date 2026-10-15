@@ -94,14 +94,23 @@ for (const d of world.decor) {
 }
 for (const w of world.windows) addGlow(w.x, w.y, w.z - 0.9, 7, 0xffb35c, 0.55);
 
-// Campfire: crossed logs, a stone ring and animated pixel flames.
+// Campfire on its stone hearth: a log teepee, a ring of stones and animated pixel flames.
 const F = world.fire;
-box(1.0, 0.18, 0.22, woodMat, F.x, F.y + 0.09, F.z).rotation.y = 0.5;
-box(1.0, 0.18, 0.22, woodMat, F.x, F.y + 0.09, F.z).rotation.y = -0.6;
-const stoneMat = new THREE.MeshLambertMaterial({ color: 0x77777e });
-for (let i = 0; i < 8; i++) {
-  const a = (i / 8) * Math.PI * 2;
-  box(0.25, 0.18, 0.25, stoneMat, F.x + Math.cos(a) * 0.62, F.y + 0.09, F.z + Math.sin(a) * 0.62);
+for (let i = 0; i < 3; i++) {
+  const log = box(1.3, 0.2, 0.24, woodMat, F.x, F.y + 0.12, F.z);
+  log.rotation.y = 0.4 + (i * Math.PI) / 3;
+}
+for (let i = 0; i < 4; i++) {                              // sticks leaning into a teepee
+  const a = (i / 4) * Math.PI * 2 + 0.3;
+  const stick = box(0.12, 0.9, 0.12, woodMat, F.x + Math.cos(a) * 0.28, F.y + 0.4, F.z + Math.sin(a) * 0.28);
+  stick.rotation.set(-Math.sin(a) * 0.45, 0, Math.cos(a) * 0.45);
+}
+const stoneMat = new THREE.MeshLambertMaterial({ color: 0x8a8a92 });
+const stoneDark = new THREE.MeshLambertMaterial({ color: 0x66666e });
+for (let i = 0; i < 12; i++) {
+  const a = (i / 12) * Math.PI * 2;
+  const s = 0.3 + (i % 3) * 0.05;
+  box(s, 0.24 + (i % 2) * 0.06, s, i % 2 ? stoneDark : stoneMat, F.x + Math.cos(a) * 0.95, F.y + 0.12, F.z + Math.sin(a) * 0.95).rotation.y = a;
 }
 const fireCanvas = document.createElement('canvas');
 fireCanvas.width = 16;
@@ -111,8 +120,8 @@ fireTex.magFilter = fireTex.minFilter = THREE.NearestFilter;
 fireTex.colorSpace = THREE.SRGBColorSpace;
 const fireMat = new THREE.MeshBasicMaterial({ map: fireTex, transparent: true, alphaTest: 0.1, side: THREE.DoubleSide, depthWrite: false, toneMapped: false });
 const flames = [Math.PI / 4, -Math.PI / 4].map((rot) => {
-  const geo = new THREE.PlaneGeometry(0.85, 1.3);
-  geo.translate(0, 0.65, 0);                             // grow upwards from the logs
+  const geo = new THREE.PlaneGeometry(1.15, 1.75);
+  geo.translate(0, 0.875, 0);                             // grow upwards from the logs
   const p = new THREE.Mesh(geo, fireMat);
   p.position.set(F.x, F.y + 0.03, F.z);
   p.rotation.y = rot;
@@ -140,10 +149,10 @@ function drawFire(level) {
   }
   fireTex.needsUpdate = true;
 }
-const fireLight = new THREE.PointLight(0xff8a3c, 25, 26, 1.6);
+const fireLight = new THREE.PointLight(0xff8a3c, 25, 32, 1.5);
 fireLight.position.set(F.x, F.y + 1.2, F.z);
 scene.add(fireLight);
-const fireGlow = addGlow(F.x, F.y + 0.8, F.z, 9, 0xff8a3c, 0.75);
+const fireGlow = addGlow(F.x, F.y + 1, F.z, 11, 0xff8a3c, 0.8);
 const windowLight = new THREE.PointLight(0xffb35c, 0, 16, 1.6);
 windowLight.position.set(69.5, world.G + 3, 62);
 scene.add(windowLight);
@@ -541,7 +550,7 @@ function update(step) {
     drawFire(fireLevel);
     for (const f of flames) f.scale.set(0.8 + fireLevel * 0.45, 0.7 + fireLevel * 0.7, 1);
     fireLight.intensity = (16 + Math.random() * 10) * (0.15 + k.night * 0.95) * (0.12 + fireLevel * 0.95);
-    fireGlow.scale.setScalar((3 + fireLevel * 6) * (1 + Math.random() * 0.18));
+    fireGlow.scale.setScalar((4 + fireLevel * 8) * (1 + Math.random() * 0.18));
   }
   atlas.waterMap.offset.x = state.resolvedSeason === 'winter' ? 0 : time * 0.02;
   atlas.waterMap.offset.y = state.resolvedSeason === 'winter' ? 0 : Math.sin(time * 0.3) * 0.05;

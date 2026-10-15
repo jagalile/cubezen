@@ -75,7 +75,8 @@ body {
   scrollbar-width: thin;
   scrollbar-color: var(--btn) transparent;
 }
-.player { grid-area: player; justify-self: center; width: min(760px, 100%); }
+.player { grid-area: player; justify-self: center; width: min(760px, 100%); transition: opacity 0.4s, width 0.45s ease; }
+.player.min { width: min(430px, 100%); }
 .legal  { grid-area: legal; justify-self: center; margin: 0; font-size: 16px; color: var(--ink); opacity: 0.75; text-shadow: 1px 1px 0 var(--edge), 0 0 6px var(--edge); }
 
 .tools {
@@ -88,14 +89,19 @@ body {
   transition: opacity 0.4s;
 }
 
-.brand, .side, .player, .legal { transition: opacity 0.4s; }
+.brand, .side, .legal { transition: opacity 0.4s; }
 
 body.zen .brand,
 body.zen .side,
 body.zen .player,
 body.zen .legal { opacity: 0; pointer-events: none; }
 body.zen .tools { opacity: 0.25; }
-body.zen .tools:hover { opacity: 1; }
+body.zen #btn-widgets { display: none; }
+/* Only real mice reveal the buttons: a tap leaves :hover stuck on touch screens. Right after
+   switching to zen the pointer is still over the button, so wait until it leaves (zen-fresh). */
+@media (hover: hover) {
+  body.zen:not(.zen-fresh) .tools:hover { opacity: 1; }
+}
 
 /* ---------- brand ---------- */
 
@@ -228,8 +234,19 @@ button { font: inherit; color: inherit; cursor: pointer; border: 0; background: 
 #task-list li.empty { color: var(--muted); font-size: 18px; }
 #task-list li span { overflow-wrap: anywhere; }
 
-.check { flex: none; width: 16px; height: 16px; background: rgba(0, 0, 0, 0.4); box-shadow: inset 0 0 0 2px #5d5580; }
-li.done .check, [aria-pressed="true"] > .check { background: var(--grass); box-shadow: inset 0 0 0 2px var(--edge), inset 0 -5px 0 #8a5a36; }
+/* the same grass cube as the logo: grey and faint when off, in colour when on */
+.check {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  background: url(../icon.svg) center / contain no-repeat;
+  image-rendering: pixelated;
+  filter: grayscale(1) brightness(0.8);
+  opacity: 0.4;
+  transition: filter 0.2s, opacity 0.2s;
+}
+.check:hover, .menu-item:hover > .check { opacity: 0.7; }
+li.done .check, [aria-pressed="true"] > .check { filter: drop-shadow(1px 1px 0 var(--edge)); opacity: 1; }
 li.done span { color: var(--muted); text-decoration: line-through; }
 
 .del { margin-left: auto; padding: 0 4px; color: var(--muted); opacity: 0; }
@@ -239,17 +256,38 @@ li:hover .del, .del:focus-visible { opacity: 1; }
 
 /* ---------- player ---------- */
 
-.player { display: flex; align-items: center; flex-wrap: wrap; gap: 14px 22px; }
+.player { display: flex; align-items: center; gap: 14px 22px; }
 
 .play { width: 52px; height: 52px; padding: 0; display: grid; place-items: center; }
 .play svg { width: 26px; height: 26px; fill: currentColor; }
 .play .i-pause, .play.playing .i-play { display: none; }
 .play.playing .i-pause { display: block; }
 
-.now { display: flex; flex-direction: column; flex: 1; min-width: 150px; }
+.now { display: flex; flex-direction: column; flex: 1; min-width: 0; }
+#track { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* Minimizing slides the sliders shut and shrinks the bar to the play button and the title. */
+.mixer {
+  display: flex;
+  flex: none;
+  gap: 22px;
+  max-width: 400px;
+  padding: 4px;
+  margin: -4px;
+  overflow: hidden;
+  transition: max-width 0.45s ease, margin 0.45s ease, opacity 0.3s 0.15s, visibility 0s;
+}
+.player.min .mixer.fold {
+  display: flex;
+  max-width: 0;
+  margin-left: -26px;
+  opacity: 0;
+  visibility: hidden;
+  transition: max-width 0.45s ease, margin 0.45s ease, opacity 0.15s, visibility 0s 0.45s;
+}
 .now .label { font-size: 16px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
 
-.mix { display: flex; flex-direction: column; gap: 2px; width: 110px; font-size: 18px; color: var(--muted); }
+.mix { display: flex; flex-direction: column; gap: 2px; width: 110px; flex: none; font-size: 18px; color: var(--muted); }
 
 input[type=range] {
   -webkit-appearance: none;
@@ -314,5 +352,8 @@ input[type=range]::-moz-range-thumb {
   .brand p { margin-left: 0; }
   .side { margin-top: 8px; max-height: none; overflow: visible; }
   .player { position: sticky; bottom: 12px; align-self: end; }
-  .mix { flex: 1; min-width: 80px; }
+  .player { flex-wrap: wrap; }
+  .mixer { flex: 1 1 100%; max-width: none; }
+  .player.min .mixer.fold { display: none; }
+  .mix { flex: 1; width: auto; min-width: 80px; }
 }
