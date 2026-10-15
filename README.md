@@ -8,9 +8,9 @@ All art and music are original. The music is composed and synthesised live in th
 
 ## Features
 
-- **A living valley**: a river with a dock and a rowboat, a farm plot with seasonal crops, a cabin with a smoking chimney, a campfire on a stone hearth, a camping tent, a mine dug into the hillside with a loaded minecart and piles of ore, trees, bushes and flowers, and hills that carry the river off into the haze. A cat sleeps by the fire, and now and then a rabbit, a flock of birds, a family of ducks or a deer coming down to drink passes by.
-- **Day and night**: a continuous cycle, synced to your clock or fixed at day, sunset or night, with sun, moon, stars, clouds and fireflies.
-- **Seasons**: picked automatically from the date or chosen by hand. Colours, particles (petals, leaves, snow) and details of the world change; in winter the river freezes.
+- **A living valley**: a river with a dock and a painted rowboat, a farm plot with seasonal crops, a cabin with a smoking chimney, a balcony, a terrace under string lights and flower boxes, paths with lanterns and a signpost leading to the dock and the mine, a campfire on a stone hearth, a camping tent, a mine dug into the hillside with a loaded minecart and piles of ore, trees, bushes and flowers, and hills that carry the river off into the haze. A cat sleeps by the fire, and now and then a rabbit, a flock of birds, a family of ducks or a deer coming down to drink passes by.
+- **Day and night**: synced to your clock by default, or a 20-minute cycle, or fixed at day, sunset or night, with sun, moon, stars, clouds and fireflies.
+- **Seasons**: picked automatically from the date (the default) or chosen by hand. Colours, particles (petals, leaves, snow) and details of the world change; in winter the river freezes.
 - **Generative music**: ever-new piano pieces, each with its own mode, motif and structure, in the spirit of calm game soundtracks.
 - **Ambience**: rain and fire with their own volume; the rain and the campfire in the scene follow their sliders.
 - **Pomodoro**: 25-minute focus with 5 and 15-minute breaks, a chime when time is up and a count of today's sessions.

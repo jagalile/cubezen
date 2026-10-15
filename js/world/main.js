@@ -93,6 +93,10 @@ for (const d of world.decor) {
   }
 }
 for (const w of world.windows) addGlow(w.x, w.y, w.z - 0.9, 7, 0xffb35c, 0.55);
+for (const b of props.bulbs) {                            // the string of lights over the terrace
+  box(0.12, 0.16, 0.12, lanternMat, b.x, b.y, b.z).castShadow = false;
+  addGlow(b.x, b.y, b.z, 1.3, 0xffc878, 0.8);
+}
 
 // Campfire on its stone hearth: a log teepee, a ring of stones and animated pixel flames.
 const F = world.fire;
@@ -270,7 +274,7 @@ function sample(t) {
 }
 
 const state = {
-  timeMode: 'cycle', season: 'auto', rain: 0, fire: 0.35,
+  timeMode: 'clock', season: 'auto', rain: 0, fire: 0.35,
   t: 0.62, resolvedSeason: null,
 };
 const FIXED_TIMES = { day: 0.45, sunset: 0.715, night: 0.92 };

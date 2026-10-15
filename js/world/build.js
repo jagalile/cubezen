@@ -178,6 +178,12 @@ export function generateWorld() {
   path(58, 68, door.x, door.z);
   path(57, 79, 58, 68);
   path(55, D - 1, 57, 79);
+  // Side paths from the porch: west over the ridge's foot down to the dock, east up to the mine.
+  path(60, 63, 54, 59);
+  path(54, 59, 46, 57);
+  path(46, 57, 46, 46);
+  path(71, 62, 80, 62);
+  path(80, 62, 88, 56);
 
   // ---- cabin ----
   const { x0, x1, z0, z1 } = CABIN;
@@ -203,6 +209,22 @@ export function generateWorld() {
   }
   // porch roof edge one step lower over the deck
   for (let x = x0 - 1; x <= x1 + 1; x++) set(x, G + 5, z1 + 3, B.ROOF);
+  // A dormer breaks up the front of the roof and opens onto a little balcony over the porch.
+  const DX0 = 67, DX1 = 71;
+  for (let x = DX0; x <= DX1; x++) {
+    for (let z = z1 + 1; z <= z1 + 3; z++) { set(x, G + 6, z, B.PLANKS); set(x, G + 7, z, B.AIR); }
+    for (let y = G + 6; y <= G + 8; y++) set(x, y, z1, x === DX0 || x === DX1 ? B.LOG : B.PLANKS);
+  }
+  set(69, G + 6, z1, B.DOOR);
+  set(69, G + 7, z1, B.DOOR);
+  set(68, G + 7, z1, B.WINDOW);
+  set(70, G + 7, z1, B.WINDOW);
+  for (let i = 0; i < 3; i++) for (let x = DX0 - 1 + i; x <= DX1 + 1 - i; x++) {
+    for (let z = z0 + 3; z <= z1 + 1; z++) set(x, G + 9 + i, z, B.ROOF);
+  }
+  // A plank terrace along the west wall, looking out over the farm and the river.
+  const TERRACE = { x0: x0 - 4, x1: x0 - 1, z0: z0, z1: z1 - 1 };
+  for (let z = TERRACE.z0; z <= TERRACE.z1; z++) for (let x = TERRACE.x0; x <= TERRACE.x1; x++) set(x, G, z, B.PLANKS);
   for (const px of [x0, x1]) for (let y = G + 1; y <= G + 4; y++) set(px, y, z1 + 3, B.LOG);
   const chimney = { x: x1 - 2, z: z0 + 2 };
   for (let y = G + 1; y <= G + 13; y++) set(chimney.x, y, chimney.z, B.COBBLE);
@@ -216,7 +238,7 @@ export function generateWorld() {
   set(FIRE.x + 1, G + 1, FIRE.z - 3, B.LOG);
 
   // Lantern posts along the path and one by the tent.
-  for (const [lx, lz] of [[62, 67], [60, 82], [53, 92], [68, 77]]) {
+  for (const [lx, lz] of [[62, 67], [60, 82], [53, 92], [68, 77], [57, 63], [49, 55], [76, 64], [84, 61]]) {
     const y = H_(lx, lz) + 1;
     decor.push({ type: 'post', x: lx + 0.5, y, z: lz + 0.5 });
     decor.push({ type: 'lantern', x: lx + 0.5, y: y + 1.5, z: lz + 0.5 });
@@ -227,8 +249,8 @@ export function generateWorld() {
   decor.push({ type: 'lantern', x: dockX + 0.55, y: WL + 2.75, z: DOCK_Z + 1.45 });
 
   // ---- along the path: a few bushes and short runs of fence ----
-  const bushes = [[60, 79, 1], [61, 80, 0], [54, 75, 1], [55, 76, 0], [65, 65, 1], [66, 64, 0], [59, 63, 1], [52, 86, 1], [61, 84, 0], [76, 83, 1], [77, 80, 0]];   // [x, z, big]
-  const fences = [[55, 78, 55, 81], [59, 81, 61, 81], [53, 88, 53, 90]];        // [x0, z0, x1, z1], posts at each cell
+  const bushes = [[60, 79, 1], [61, 80, 0], [54, 75, 1], [55, 76, 0], [65, 65, 1], [66, 64, 0], [56, 63, 1], [53, 55, 0], [52, 54, 1], [78, 59, 1], [79, 60, 0], [86, 62, 0], [52, 86, 1], [61, 84, 0], [76, 83, 1], [77, 80, 0]];   // [x, z, big]
+  const fences = [[55, 78, 55, 81], [59, 81, 61, 81], [53, 88, 53, 90], [60, 52, 63, 52], [60, 53, 60, 54], [60, 58, 62, 58]];        // [x0, z0, x1, z1], posts at each cell
 
   // ---- trees ----
   const taken = new Uint8Array(W * D);
@@ -315,7 +337,8 @@ export function generateWorld() {
     ground: (x, z) => H_(Math.floor(x), Math.floor(z)) + 1,
     farm: FARM, dock: { x: dockX, z: DOCK_Z }, camp: CAMP, fences, bushes, mine: MINE,
     fire: { x: FIRE.x + 0.5, y: G + 1, z: FIRE.z + 0.5 },
-    windows: [{ x: 67, y: G + 3, z: z1 + 1.2 }, { x: 72, y: G + 3, z: z1 + 1.2 }],
+    windows: [{ x: 67, y: G + 3, z: z1 + 1.2 }, { x: 72, y: G + 3, z: z1 + 1.2 }, { x: 69.5, y: G + 7, z: z1 + 1.2 }],
+    cabin: CABIN, terrace: TERRACE,
   };
 }
 

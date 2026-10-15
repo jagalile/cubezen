@@ -91,7 +91,9 @@
   renderPomodoro();
 
   // ---------- world: time of day & season ----------
-  const worldPrefs = store.get('world', { time: 'cycle', season: 'auto' });
+  // v2 made Clock + Auto the default; older saves always stored the previous default (Cycle), so reset them once.
+  let worldPrefs = store.get('world', null);
+  if (!worldPrefs || worldPrefs.v !== 2) worldPrefs = { time: 'clock', season: 'auto', v: 2 };
   function renderWorld() {
     document.querySelectorAll('#time-tabs .tab').forEach((t) => t.classList.toggle('active', t.dataset.time === worldPrefs.time));
     document.querySelectorAll('#season-tabs .tab').forEach((t) => t.classList.toggle('active', t.dataset.season === worldPrefs.season));

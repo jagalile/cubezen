@@ -303,16 +303,145 @@ export function createProps(scene, world) {
   scene.add(yardSnowMesh);
   seasonal.winter.push(yardSnowMesh);
 
+  // ---- around the cabin: the west terrace, the balcony, the porch and flower boxes ----
+  const { G, cabin, terrace } = world;
+  const home = [], blooms = [], homeSnow = [];
+  const flowerColors = ['#e8607a', '#f0c040', '#f4f0f8', '#b07ad8', '#ff8a4c'];
+  const pot = (x, y, z, i, big) => {                                    // clay pot with a leafy plant
+    const s = big ? 1.3 : 1;
+    home.push(piece(0.36 * s, 0.32 * s, 0.36 * s, x, y + 0.16 * s, z, '#b8643c'));
+    home.push(piece(0.4 * s, 0.07, 0.4 * s, x, y + 0.31 * s, z, '#a0522d'));
+    home.push(piece(0.42 * s, 0.3 * s, 0.42 * s, x, y + 0.48 * s, z, bushGreens[i % 3], i));
+    for (let k = 0; k < 3; k++) blooms.push(piece(0.1, 0.1, 0.1, x + (k - 1) * 0.13 * s, y + (0.62 + (k % 2) * 0.06) * s, z + ((k * 7) % 3 - 1) * 0.12, flowerColors[(i + k) % 5]));
+    homeSnow.push(piece(0.36 * s, 0.05, 0.36 * s, x, y + 0.66 * s, z, '#f4f8fc', i));
+  };
+  // Terrace: a table with a teapot and mugs, two chairs and pots along the railing.
+  const tbx = terrace.x0 + 2, tbz = terrace.z0 + 3.5, fy = G + 1;
+  home.push(piece(1.3, 0.1, 1.0, tbx, fy + 0.75, tbz, '#a8804f'));
+  for (const [dx, dz] of [[-0.5, -0.36], [0.5, -0.36], [-0.5, 0.36], [0.5, 0.36]]) home.push(piece(0.1, 0.72, 0.1, tbx + dx, fy + 0.36, tbz + dz, '#6b4a2b'));
+  home.push(piece(0.24, 0.2, 0.24, tbx + 0.2, fy + 0.9, tbz, '#5d7aa8'), piece(0.08, 0.08, 0.2, tbx + 0.36, fy + 0.95, tbz, '#5d7aa8'));
+  home.push(piece(0.12, 0.13, 0.12, tbx - 0.3, fy + 0.865, tbz - 0.2, '#f0e8d8'), piece(0.12, 0.13, 0.12, tbx - 0.25, fy + 0.865, tbz + 0.25, '#e8a07a'));
+  for (const side of [-1, 1]) {                                          // chairs on either side of the table
+    const chz = tbz + side * 1.0;
+    home.push(piece(0.6, 0.08, 0.55, tbx, fy + 0.45, chz, '#946c46'));
+    for (const [dx, dz] of [[-0.24, -0.22], [0.24, -0.22], [-0.24, 0.22], [0.24, 0.22]]) home.push(piece(0.08, 0.45, 0.08, tbx + dx, fy + 0.22, chz + dz, '#6b4a2b'));
+    home.push(piece(0.6, 0.55, 0.08, tbx, fy + 0.75, chz + side * 0.26, '#946c46'));
+    home.push(piece(0.5, 0.06, 0.45, tbx, fy + 0.52, chz, side < 0 ? '#c8504a' : '#5d8a5a'));   // cushions
+  }
+  pot(terrace.x0 + 0.5, fy, terrace.z0 + 1.5, 0, true);
+  pot(terrace.x1 - 0.1, fy, terrace.z0 + 0.6, 1);
+  pot(terrace.x0 + 0.5, fy, terrace.z1 - 0.6, 2, true);
+  pot(terrace.x1 - 0.4, fy, terrace.z1 + 0.4, 3);
+  // A string of lights from the cabin's corner to a post at the terrace's far corner.
+  const lightPost = [terrace.x0 + 0.35, terrace.z0 + 0.35];
+  home.push(piece(0.18, 2.9, 0.18, lightPost[0], fy + 1.45, lightPost[1], '#6b4a2b'));
+  const bulbs = [];
+  const strand = (ax, ay, az, bx, by, bz, n) => {
+    for (let i = 0; i <= n; i++) {
+      const t = i / n, sag = Math.sin(t * Math.PI) * 0.45;
+      const x = ax + (bx - ax) * t, y = ay + (by - ay) * t - sag, z = az + (bz - az) * t;
+      if (i < n) {
+        const t2 = (i + 1) / n, x2 = ax + (bx - ax) * t2, y2 = ay + (by - ay) * t2 - Math.sin(t2 * Math.PI) * 0.45, z2 = az + (bz - az) * t2;
+        const len = Math.hypot(x2 - x, y2 - y, z2 - z), g = new THREE.BoxGeometry(0.03, 0.03, len);
+        g.lookAt(new THREE.Vector3(x2 - x, y2 - y, z2 - z));
+        g.translate((x + x2) / 2, (y + y2) / 2, (z + z2) / 2);
+        tmp.set('#2d2d33');
+        const c = new Float32Array(g.attributes.position.count * 3);
+        for (let k = 0; k < c.length; k += 3) { c[k] = tmp.r; c[k + 1] = tmp.g; c[k + 2] = tmp.b; }
+        g.setAttribute('color', new THREE.BufferAttribute(c, 3));
+        home.push(g);
+      }
+      if (i > 0 && i < n) bulbs.push({ x, y: y - 0.1, z });
+    }
+  };
+  strand(lightPost[0], fy + 2.8, lightPost[1], cabin.x0 - 0.05, fy + 4.2, cabin.z1 - 0.5, 9);
+  strand(lightPost[0], fy + 2.8, lightPost[1], cabin.x0 - 0.05, fy + 4.2, cabin.z0 + 0.5, 4);
+  // Balcony railing around the planks in front of the dormer, a chair and a pot.
+  const by = G + 7, bx0 = 67, bx1 = 71, bz1 = cabin.z1 + 3;
+  for (let x = bx0; x <= bx1 + 1; x++) home.push(piece(0.14, 0.75, 0.14, x + (x > bx1 ? -0.07 : 0.07), by + 0.375, bz1 + 0.93, wood[x % 3]));
+  for (let z = cabin.z1 + 1; z <= bz1; z++) for (const x of [bx0 + 0.07, bx1 + 0.93]) home.push(piece(0.14, 0.75, 0.14, x, by + 0.375, z, wood[z % 3]));
+  for (const h of [0.35, 0.7]) {
+    home.push(piece(bx1 - bx0 + 1, 0.08, 0.08, (bx0 + bx1 + 1) / 2, by + h, bz1 + 0.93, wood[1]));
+    for (const x of [bx0 + 0.07, bx1 + 0.93]) home.push(piece(0.08, 0.08, 2.9, x, by + h, cabin.z1 + 2.45, wood[1]));
+  }
+  home.push(piece(0.55, 0.08, 0.5, bx0 + 0.9, by + 0.42, bz1 + 0.2, '#946c46'), piece(0.55, 0.5, 0.08, bx0 + 0.9, by + 0.7, bz1 - 0.06, '#946c46'));
+  for (const [dx, dz] of [[-0.22, -0.2], [0.22, -0.2], [-0.22, 0.2], [0.22, 0.2]]) home.push(piece(0.07, 0.42, 0.07, bx0 + 0.9 + dx, by + 0.21, bz1 + 0.2 + dz, '#6b4a2b'));
+  pot(bx1 + 0.4, by, bz1 + 0.4, 4);
+  pot(bx1 + 0.45, by, cabin.z1 + 1.5, 2, true);
+  // Porch: a bench under the left window, a doormat, a pot by the door and some firewood.
+  const pz = cabin.z1 + 1.5;
+  home.push(piece(1.8, 0.1, 0.5, 66.5, fy + 0.45, pz - 0.2, '#946c46'));
+  for (const dx of [-0.75, 0.75]) home.push(piece(0.12, 0.42, 0.42, 66.5 + dx, fy + 0.21, pz - 0.2, '#6b4a2b'));
+  home.push(piece(0.8, 0.03, 0.55, 69.5, fy + 0.015, cabin.z1 + 1.4, '#a8553a'));
+  pot(70.6, fy, cabin.z1 + 1.3, 1, true);
+  [[-0.3, 0], [0.05, 0], [0.4, 0], [-0.12, 1], [0.22, 1]].forEach(([dx, row], i) => home.push(piece(0.3, 0.3, 0.9, 73.2 + dx, fy + 0.15 + row * 0.28, cabin.z1 + 1.4, wood[i % 3])));
+  // Flower boxes under the front and side windows.
+  const windowBox = (x, z, alongX, i) => {
+    const w = alongX ? 2.1 : 0.4, d = alongX ? 0.4 : 2.1, y = G + 1.82;
+    home.push(piece(w, 0.3, d, x, y, z, '#7a5232'));
+    for (let k = 0; k < 6; k++) {
+      const o = (k - 2.5) * 0.33;
+      home.push(piece(0.28, 0.2, 0.28, x + (alongX ? o : 0), y + 0.22, z + (alongX ? 0 : o), bushGreens[(k + i) % 3], k));
+      blooms.push(piece(0.12, 0.12, 0.12, x + (alongX ? o : 0), y + 0.36, z + (alongX ? 0 : o), flowerColors[(k + i) % 5]));
+    }
+    homeSnow.push(piece(w, 0.06, d, x, y + 0.36, z, '#f4f8fc'));
+  };
+  windowBox(67, cabin.z1 + 1.2, true, 0);
+  windowBox(72, cabin.z1 + 1.2, true, 2);
+  windowBox(cabin.x0 - 0.2, cabin.z0 + 4, false, 1);
+  scene.add(merged(home));
+  const bloomMesh = merged(blooms), homeSnowMesh = merged(homeSnow);
+  scene.add(bloomMesh, homeSnowMesh);
+  seasonal.winter.push(homeSnowMesh);
+  seasonal.flowers = [bloomMesh];
+
+  // ---- along the side paths: a signpost, a bench by the river view, a wheelbarrow, a bucket ----
+  const trail = [];
+  const sgx = 61.5, sgz = 62.5, sgy = ground(sgx, sgz);                // signpost where the paths split
+  trail.push(piece(0.16, 1.9, 0.16, sgx, sgy + 0.95, sgz, '#6b4a2b'));
+  for (const [dy, rot, col] of [[1.6, 0.5, '#a8804f'], [1.25, -0.6, '#946c46'], [0.92, 2.2, '#a8804f']]) {
+    const sign = piece(0.9, 0.24, 0.06, 0.38, 0, 0, col);
+    sign.rotateY(rot);
+    sign.translate(sgx, sgy + dy, sgz);
+    const tip = piece(0.14, 0.14, 0.06, 0.88, 0, 0, col, 0, Math.PI / 4);
+    tip.rotateY(rot);
+    tip.translate(sgx, sgy + dy, sgz);
+    trail.push(sign, tip);
+  }
+  const bnx = 52.5, bnz = 56.9, bny = ground(bnx, bnz);                 // bench looking out over the farm
+  trail.push(piece(1.6, 0.12, 0.45, bnx, bny + 0.45, bnz, '#946c46'));
+  trail.push(piece(1.6, 0.35, 0.08, bnx, bny + 0.75, bnz - 0.22, '#946c46'));
+  for (const dx of [-0.65, 0.65]) trail.push(piece(0.12, 0.45, 0.4, bnx + dx, bny + 0.22, bnz, '#6b4a2b'));
+  const wbx = 82.5, wbz = 64.2, wby = ground(wbx, wbz);               // wheelbarrow of ore on the way to the mine
+  trail.push(piece(1.0, 0.4, 0.7, wbx, wby + 0.5, wbz, '#7a5232', 0.3));
+  trail.push(piece(0.18, 0.36, 0.1, wbx + 0.55 * Math.cos(0.3), wby + 0.2, wbz - 0.55 * Math.sin(0.3), '#2d2d33', 0.3));
+  for (const s of [-0.25, 0.25]) {
+    trail.push(piece(1.1, 0.06, 0.06, wbx - 0.45 * Math.cos(0.3) + s * Math.sin(0.3), wby + 0.38, wbz + 0.45 * Math.sin(0.3) + s * Math.cos(0.3), '#6b4a2b', 0.3));
+  }
+  for (let i = 0; i < 5; i++) trail.push(piece(0.24, 0.24, 0.24, wbx + (i % 3 - 1) * 0.25, wby + 0.78 + (i > 2 ? 0.1 : 0), wbz + (i % 2 - 0.5) * 0.25, ['#2a2a30', '#c87533', '#85858c'][i % 3], i));
+  // A bucket and fishing rod at the land end of the dock.
+  const fx = dock.x + 5.7, fz = dock.z + 0.55;
+  trail.push(piece(0.36, 0.34, 0.36, fx, deckY + 0.23, fz, '#7c8088'), piece(0.3, 0.02, 0.3, fx, deckY + 0.39, fz, '#3a6aa0'));
+  trail.push(piece(0.04, 0.04, 2.2, fx - 1.4, deckY + 0.45, fz + 0.2, '#8a6440', 0.15));
+  scene.add(merged(trail));
+
+  // The rowboat is painted, so it stands out from the bare planks of the dock.
   const boat = merged([
-    piece(2.5, 0.1, 0.95, 0, 0.05, 0, '#9c7448'),
-    piece(2.5, 0.38, 0.1, 0, 0.24, -0.5, '#7a5232'),
-    piece(2.5, 0.38, 0.1, 0, 0.24, 0.5, '#7a5232'),
-    piece(0.1, 0.38, 1.0, -1.25, 0.24, 0, '#7a5232'),
-    piece(0.1, 0.3, 0.7, 1.32, 0.28, 0, '#7a5232'),
-    piece(0.12, 0.42, 0.12, 1.4, 0.3, 0, '#6b4a2b'),
-    piece(0.3, 0.06, 0.9, 0.1, 0.32, 0, '#a8804f'),
-    piece(1.7, 0.05, 0.08, -0.1, 0.18, 0.22, '#c8a070', 0.12),
-    piece(1.7, 0.05, 0.08, -0.1, 0.18, -0.22, '#c8a070', -0.12),
+    piece(2.5, 0.1, 0.95, 0, 0.05, 0, '#4f93b0'),
+    piece(2.5, 0.38, 0.1, 0, 0.24, -0.5, '#2f6f8a'),
+    piece(2.5, 0.38, 0.1, 0, 0.24, 0.5, '#2f6f8a'),
+    piece(2.52, 0.08, 0.12, 0, 0.42, -0.5, '#f2ece0'),
+    piece(2.52, 0.08, 0.12, 0, 0.42, 0.5, '#f2ece0'),
+    piece(2.54, 0.07, 0.12, 0, 0.14, -0.5, '#c8443a'),
+    piece(2.54, 0.07, 0.12, 0, 0.14, 0.5, '#c8443a'),
+    piece(0.1, 0.38, 1.0, -1.25, 0.24, 0, '#2f6f8a'),
+    piece(0.12, 0.08, 1.02, -1.25, 0.42, 0, '#f2ece0'),
+    piece(0.1, 0.3, 0.7, 1.32, 0.28, 0, '#2f6f8a'),
+    piece(0.12, 0.42, 0.12, 1.4, 0.3, 0, '#f2ece0'),
+    piece(0.3, 0.06, 0.9, 0.1, 0.32, 0, '#e8d8b0'),
+    piece(0.3, 0.06, 0.9, -0.85, 0.32, 0, '#e8d8b0'),
+    piece(1.7, 0.05, 0.08, -0.1, 0.36, 0.22, '#e8d8b0', 0.12),
+    piece(1.7, 0.05, 0.08, -0.1, 0.36, -0.22, '#e8d8b0', -0.12),
   ]);
   const boatHome = new THREE.Vector3(dock.x + 1.9, waterY - 0.12, dock.z - 2.45);   // upstream side, clear against the water
   boat.position.copy(boatHome);
@@ -321,6 +450,7 @@ export function createProps(scene, world) {
   function setSeason(name) {
     for (const o of seasonal.winter) o.visible = name === 'winter';
     for (const o of seasonal.autumn) o.visible = name === 'autumn';
+    for (const o of seasonal.flowers) o.visible = name !== 'winter';
     const grown = { spring: 0, summer: 0.6, autumn: 1, winter: 0 }[name];
     pumpkins.forEach((p, i) => {
       p.visible = grown > 0;
@@ -331,6 +461,7 @@ export function createProps(scene, world) {
 
   let frozen = false;
   return {
+    bulbs,
     setSeason(name) { frozen = name === 'winter'; setSeason(name); },
     update(dt, time) {
       if (frozen) { boat.position.copy(boatHome); boat.rotation.set(0, 0.05, 0); return; }
